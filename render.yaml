@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: your-app-name
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PALM_API_KEY
+        sync: false

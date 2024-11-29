@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Summarizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #222;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,255,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff00;
+            margin-bottom: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        input[type="url"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #333;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #2c3e50;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            color: #00ff00;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #34495e;
+            box-shadow: 0 0 15px rgba(0,255,0,0.2);
+        }
+
+        .summary-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #1e272e;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+        }
+
+        .loading:after {
+            content: '...';
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
+        }
+
+        .error {
+            color: #ff4444;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .section-title {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .subsection-title {
+            color: #00cc00;
+            margin-top: 20px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .summary-content {
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .summary-content ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        .summary-content ul li:before {
+            content: "◉";
+            color: #00ff00;
+            margin-right: 10px;
+        }
+
+        .summary-section {
+            background: rgba(34, 34, 34, 0.95);
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
+        }
+
+        .back-arrow {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            background: #2c3e50;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px 30px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-arrow:hover {
+            background: #34495e;
+            box-shadow: 0 0 20px rgba(0,255,0,0.3);
+            transform: translateX(-5px);
+        }
+
+        .back-arrow i {
+            font-size: 28px;
+        }
+    </style>
+</head>
+<body>
+    <a href="dashboard.html" class="back-arrow">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+
+    <div class="container">
+        <h1>Video Summarizer</h1>
+        
+        <div class="input-section">
+            <input type="url" id="videoUrl" placeholder="Enter YouTube video URL...">
+            <button onclick="summarizeVideo()">Generate Summary</button>
+        </div>
+
+        <div class="loading" id="loading">
+            Analyzing video content
+        </div>
+
+        <div class="error" id="error">
+            Error processing video. Please check the URL and try again.
+        </div>
+
+        <div class="summary-section" id="summarySection">
+            <h2>Summary</h2>
+            <div id="summaryContent"></div>
+        </div>
+    </div>
+
+    <script>
+        async function summarizeVideo() {
+            const videoUrl = document.getElementById('videoUrl').value;
+            if (!videoUrl) {
+                showError('Please enter a video URL');
+                return;
+            }
+
+            // Show loading
+            const loadingElement = document.getElementById('loading');
+            loadingElement.style.display = 'block';
+            loadingElement.textContent = 'Analyzing video...';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('summarySection').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: videoUrl })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to analyze video');
+                }
+
+                const summarySection = document.getElementById('summarySection');
+                summarySection.innerHTML = `
+                    <div class="summary-content">
+                        <pre>${data.summary}</pre>
+                    </div>
+                `;
+                summarySection.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message || 'Failed to analyze video. Please try again.');
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Add Enter key support
+        document.getElementById('videoUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                summarizeVideo();
+            }
+        });
+    </script>
+</body>
+</html>
