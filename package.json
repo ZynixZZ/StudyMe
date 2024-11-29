@@ -13,7 +13,8 @@
     "express-rate-limit": "^7.1.5",
     "ws": "^8.16.0",
     "youtube-dl-exec": "^2.5.6",
-    "compression": "^1.7.4"
+    "compression": "^1.7.4",
+    "youtube-transcript-api": "^1.0.1"
   },
   "engines": {
     "node": ">=14.0.0"
