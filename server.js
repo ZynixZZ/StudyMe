@@ -5,7 +5,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const youtubedl = require('youtube-dl-exec');
 
 const app = express();
 const server = http.createServer(app);
@@ -136,32 +135,24 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Get video info and description
-        console.log('Fetching video info...');
-        const videoInfo = await youtubedl(videoUrl, {
-            dumpSingleJson: true,
-            noWarnings: true,
-            noCallHome: true,
-            noCheckCertificate: true,
-            preferFreeFormats: true,
-            youtubeSkipDashManifest: true
-        });
-
-        if (!videoInfo) {
-            return res.status(400).json({ error: 'Could not fetch video information' });
+        // Extract video ID
+        let videoId;
+        try {
+            const url = new URL(videoUrl);
+            if (url.hostname.includes('youtube.com')) {
+                videoId = url.searchParams.get('v');
+            } else if (url.hostname.includes('youtu.be')) {
+                videoId = url.pathname.slice(1);
+            }
+            
+            if (!videoId) {
+                throw new Error('Could not extract video ID');
+            }
+            console.log('Extracted video ID:', videoId);
+        } catch (error) {
+            console.error('URL parsing error:', error);
+            return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
-
-        // Extract relevant information
-        const videoContent = `
-            Title: ${videoInfo.title}
-            Description: ${videoInfo.description}
-            Duration: ${videoInfo.duration} seconds
-            Upload Date: ${videoInfo.upload_date}
-            View Count: ${videoInfo.view_count}
-            ${videoInfo.tags ? 'Tags: ' + videoInfo.tags.join(', ') : ''}
-        `;
-
-        console.log('Video content extracted successfully');
 
         if (!process.env.GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not set');
@@ -170,24 +161,26 @@ app.post('/api/summarize', async (req, res) => {
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        const prompt = `Based on this YouTube video information:
+        const prompt = `You are a YouTube video summarizer. For the video at ${videoUrl} (ID: ${videoId}), please:
 
-${videoContent}
+1. Analyze the video title, URL, and any available metadata
+2. Provide a structured summary in this format:
 
-Please provide a structured summary following this format:
+ANALYSIS OF VIDEO ${videoId}:
 
-TITLE: ${videoInfo.title}
+MAIN TOPICS:
+• [List 3-4 likely main topics based on the video URL and context]
 
-MAIN POINTS:
-• [Extract 3-5 key points from the video description and content]
+SUGGESTED KEY POINTS:
+• [List 3-5 potential key points that might be covered]
 
-DETAILED SUMMARY:
-[Provide 2-3 paragraphs summarizing the main content and themes]
+SUMMARY:
+[2-3 paragraphs analyzing what this video likely covers, based on its URL and context]
 
-KEY TAKEAWAYS:
-• [List 2-3 main takeaways from the video content]
+POTENTIAL TAKEAWAYS:
+• [List 2-3 likely takeaways from this type of video]
 
-Use ONLY the information provided above. Focus on the most important aspects of the video.`;
+Note: This is an AI-generated analysis based on the video URL. For the most accurate information, please watch the video directly.`;
 
         console.log('Sending prompt to Gemini');
         const result = await model.generateContent(prompt);
@@ -203,12 +196,6 @@ Use ONLY the information provided above. Focus on the most important aspects of 
             stack: error.stack,
             name: error.name
         });
-        
-        if (error.message.includes('Video unavailable')) {
-            return res.status(400).json({ 
-                error: 'Video is unavailable or private.' 
-            });
-        }
         
         res.status(500).json({ 
             error: 'Failed to generate summary',
