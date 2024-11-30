@@ -5,6 +5,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const youtubedl = require('youtube-dl-exec');
 
 const app = express();
 const server = http.createServer(app);
@@ -135,31 +136,84 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
+        // Get video info and description
+        console.log('Fetching video info...');
+        const videoInfo = await youtubedl(videoUrl, {
+            dumpSingleJson: true,
+            noWarnings: true,
+            noCallHome: true,
+            noCheckCertificate: true,
+            preferFreeFormats: true,
+            youtubeSkipDashManifest: true
+        });
+
+        if (!videoInfo) {
+            return res.status(400).json({ error: 'Could not fetch video information' });
+        }
+
+        // Extract relevant information
+        const videoContent = `
+            Title: ${videoInfo.title}
+            Description: ${videoInfo.description}
+            Duration: ${videoInfo.duration} seconds
+            Upload Date: ${videoInfo.upload_date}
+            View Count: ${videoInfo.view_count}
+            ${videoInfo.tags ? 'Tags: ' + videoInfo.tags.join(', ') : ''}
+        `;
+
+        console.log('Video content extracted successfully');
+
         if (!process.env.GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not set');
             return res.status(500).json({ error: 'AI service configuration error' });
         }
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        
-        // Create a more specific prompt for video summarization
-        const prompt = `Please analyze this YouTube video: ${videoUrl} and provide:
-        1. Main topics covered
-        2. Key points and takeaways
-        3. Brief summary
-        Please be concise and focus on the most important information.`;
 
+        const prompt = `Based on this YouTube video information:
+
+${videoContent}
+
+Please provide a structured summary following this format:
+
+TITLE: ${videoInfo.title}
+
+MAIN POINTS:
+• [Extract 3-5 key points from the video description and content]
+
+DETAILED SUMMARY:
+[Provide 2-3 paragraphs summarizing the main content and themes]
+
+KEY TAKEAWAYS:
+• [List 2-3 main takeaways from the video content]
+
+Use ONLY the information provided above. Focus on the most important aspects of the video.`;
+
+        console.log('Sending prompt to Gemini');
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
 
-        console.log('Summary generated for video:', videoUrl);
+        console.log('Summary generated successfully');
         res.status(200).json({ summary });
 
     } catch (error) {
-        console.error('Summary error:', error.message);
-        console.error('Stack trace:', error.stack);
-        res.status(500).json({ error: 'Failed to generate summary' });
+        console.error('Detailed error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        
+        if (error.message.includes('Video unavailable')) {
+            return res.status(400).json({ 
+                error: 'Video is unavailable or private.' 
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to generate summary',
+            details: error.message 
+        });
     }
 });
 
@@ -176,15 +230,76 @@ app.use((req, res, next) => {
 
 // WebSocket setup
 const wss = new WebSocket.Server({ server });
+const clients = new Map();
 
 wss.on('connection', (ws) => {
-    console.log('New WebSocket connection');  // Add this log
+    console.log('New WebSocket connection');
 
     ws.on('message', (message) => {
-        console.log('Received:', message);  // Add this log
-        // Your existing WebSocket message handling
+        try {
+            const data = JSON.parse(message.toString());
+            console.log('Received message:', data);
+
+            if (data.type === 'connection') {
+                // Store username and connection
+                clients.set(ws, data.username);
+                console.log(`${data.username} connected`);
+                
+                // Broadcast user joined message
+                wss.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'system',
+                            username: 'System',
+                            message: `${data.username} joined the chat`
+                        }));
+                    }
+                });
+            } else if (data.type === 'chat') {
+                console.log('Broadcasting chat message:', data);
+                // Broadcast the message to all clients
+                wss.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'chat',
+                            username: clients.get(ws),
+                            message: data.message
+                        }));
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('WebSocket message error:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        const username = clients.get(ws);
+        clients.delete(ws);
+        
+        if (username) {
+            console.log(`${username} disconnected`);
+            wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'system',
+                        username: 'System',
+                        message: `${username} left the chat`
+                    }));
+                }
+            });
+        }
     });
 });
+
+// Heartbeat to keep connections alive
+setInterval(() => {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.ping();
+        }
+    });
+}, 30000);
 
 // Start server
 server.listen(PORT, () => {
