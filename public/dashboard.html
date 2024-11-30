@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(25, 25, 25, 0.95);
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 8px;
+            word-wrap: break-word;
+            font-size: 15px;
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.user {
+            background: rgba(40, 40, 40, 0.9);
+            color: #fff;
+        }
+
+        .message.ai {
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #444;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #333;
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background: #444;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+
+        /* Custom scrollbar */
+        #messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #messages::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        #messages::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        /* Message animations */
+        .message {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Placeholder styling */
+        ::placeholder {
+            color: #666;
+        }
+
+        /* Add these styles for the chat widget */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(25, 25, 25, 0.95);
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .chat-header {
+            padding: 10px;
+            background: #333;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            gap: 5px;
+            border-top: 1px solid #333;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .chat-input button {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .chat-message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            background: rgba(40, 40, 40, 0.9);
+            color: #fff;
+            margin-left: 20px;
+        }
+
+        .chat-message.other {
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+            margin-right: 20px;
+        }
+
+        .minimize-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 5px;
+            font-size: 14px;
+            justify-content: space-between;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background: #44ff44;
+            box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+        }
+
+        .status-dot.disconnected {
+            background: #ff4444;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .status-dot.connecting {
+            background: #ffaa44;
+            box-shadow: 0 0 10px rgba(255, 170, 68, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .study-note-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            margin-left: auto;
+        }
+
+        .study-note-panel {
+            position: fixed;
+            left: -400px;
+            top: 0;
+            width: 380px;
+            height: 100vh;
+            background: rgba(25, 25, 25, 0.95);
+            border-right: 2px solid #333;
+            padding: 20px;
+            transition: left 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .study-note-panel.active {
+            left: 0;
+        }
+
+        .study-note-content {
+            padding: 20px;
+        }
+
+        .study-note-content h3 {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 200px;
+            resize: vertical;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cancel-btn {
+            background: #444;
+        }
+
+        .cancel-btn:hover {
+            background: #555;
+        }
+
+        .url-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .summarize-btn {
+            padding: 8px 16px;
+            white-space: nowrap;
+        }
+
+        .summary-status {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .summary-status.loading {
+            color: #ffaa44;
+        }
+
+        .summary-status.success {
+            color: #44ff44;
+        }
+
+        .summary-status.error {
+            color: #ff4444;
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .notes-list {
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .note-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .note-content {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .note-item:hover {
+            background: rgba(60, 60, 60, 0.9);
+        }
+
+        .note-item h4 {
+            margin: 0 0 5px 0;
+            color: #fff;
+        }
+
+        .note-item p {
+            margin: 0;
+            color: #aaa;
+            font-size: 0.9em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .load-notes-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .note-preview {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .delete-note-btn {
+            background: none;
+            border: none;
+            color: #ff4444;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 5px;
+            margin-left: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .delete-note-btn:hover {
+            color: #ff6666;
+        }
+
+        .notes-controls {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .delete-mode-btn {
+            padding: 8px 16px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .delete-mode-btn.active {
+            background-color: #ff4444;
+        }
+
+        .delete-mode-btn:hover {
+            background-color: #ff6666;
+        }
+
+        .summary-status.warning {
+            color: #ffaa44;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <div id="studyNotePanel" class="study-note-panel">
+        <div class="study-note-content">
+            <div class="notes-header">
+                <h3>Study Notes</h3>
+                <button id="loadNotesBtn" class="load-notes-btn">Load Previous Notes</button>
+            </div>
+            <div id="notesList" class="notes-list" style="display: none;">
+                <!-- Notes will be populated here -->
+            </div>
+            <form id="studyNoteForm">
+                <div class="form-group">
+                    <label for="youtubeUrl">YouTube URL</label>
+                    <div class="url-input-container">
+                        <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL...">
+                        <button type="button" id="summarizeBtn" class="summarize-btn">Summarize</button>
+                    </div>
+                    <div id="summaryStatus" class="summary-status"></div>
+                </div>
+                <div class="form-group">
+                    <label for="noteTitle">Title</label>
+                    <input type="text" id="noteTitle" placeholder="Enter note title...">
+                </div>
+                <div class="form-group">
+                    <label for="noteContent">Content</label>
+                    <textarea id="noteContent" placeholder="Enter your study notes..."></textarea>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit">Save Note</button>
+                    <button type="button" class="cancel-btn" onclick="toggleStudyNote()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="chat-container">
+        <div class="connection-status">
+            <span class="status-dot"></span>
+            <span id="connectionStatus">Connecting to AI...</span>
+            <button id="studyNoteBtn" class="study-note-btn">Study Note</button>
+        </div>
+        
+        <div id="messages"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Enter your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header" id="chatHeader">
+            <h3>Live Chat</h3>
+            <button class="minimize-btn" id="minimizeChat">+</button>
+        </div>
+        <div id="chatContent" style="display: none;">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        window.addEventListener('load', () => {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                console.log('No user logged in, redirecting to login...');
+                window.location.href = '/login.html';
+                return;
+            }
+            console.log('Logged in as:', username);
+        });
+
+        const statusDot = document.querySelector('.status-dot');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        function updateConnectionStatus(status) {
+            statusDot.className = 'status-dot';
+            switch(status) {
+                case 'connected':
+                    statusDot.classList.add('connected');
+                    connectionStatus.textContent = 'Connected to AI';
+                    break;
+                case 'disconnected':
+                    statusDot.classList.add('disconnected');
+                    connectionStatus.textContent = 'Disconnected from AI';
+                    break;
+                case 'connecting':
+                    statusDot.classList.add('connecting');
+                    connectionStatus.textContent = 'Connecting to AI...';
+                    break;
+            }
+        }
+
+        async function testAIConnection() {
+            updateConnectionStatus('connecting');
+            try {
+                const response = await fetch('/api/ai-chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: 'test connection' })
+                });
+
+                if (response.ok) {
+                    updateConnectionStatus('connected');
+                } else {
+                    updateConnectionStatus('disconnected');
+                }
+            } catch (error) {
+                console.error('AI Connection test failed:', error);
+                updateConnectionStatus('disconnected');
+            }
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+
+            try {
+                displayMessage('You', message);
+
+                const response = await fetch('/api/ai-chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayMessage('AI', data.response);
+                messageInput.value = '';
+            } catch (error) {
+                console.error('Chat error:', error);
+                displayMessage('System', 'Error communicating with AI. Please try again.');
+            }
+        }
+
+        // Enter key to send
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function displayMessage(sender, message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${sender.toLowerCase() === 'you' ? 'user' : 'ai'}`;
+            messageElement.textContent = `${sender}: ${message}`;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}`;
+            
+            const socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                console.log('Connected to chat');
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+            
+            socket.onclose = function() {
+                console.log('Disconnected from chat');
+                // Try to reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            return socket;
+        }
+
+        // Initialize WebSocket connection
+        let socket = connectWebSocket();
+
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value.trim();
+            
+            if (message && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'chat',
+                    message: message,
+                    sender: username
+                }));
+                
+                displayChatMessage('You', message);
+                chatInput.value = '';
+            }
+        }
+
+        function displayChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message ${sender === 'You' ? 'user' : 'other'}`;
+            messageElement.textContent = `${sender}: ${message}`;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Chat widget minimize/maximize
+        const chatWidget = document.getElementById('chatWidget');
+        const chatContent = document.getElementById('chatContent');
+        const minimizeBtn = document.getElementById('minimizeChat');
+        let isMinimized = true;
+
+        minimizeBtn.addEventListener('click', () => {
+            isMinimized = !isMinimized;
+            chatContent.style.display = isMinimized ? 'none' : 'block';
+            minimizeBtn.textContent = isMinimized ? '+' : '−';
+        });
+
+        // Chat input Enter key handler
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+
+        // Connect to WebSocket when page loads
+        connectWebSocket();
+
+        // Call this when the page loads
+        window.addEventListener('load', () => {
+            testAIConnection();
+        });
+
+        function toggleStudyNote() {
+            const panel = document.getElementById('studyNotePanel');
+            panel.classList.toggle('active');
+        }
+
+        // Add click handler to the Study Note button
+        document.getElementById('studyNoteBtn').addEventListener('click', toggleStudyNote);
+
+        // Add event listeners
+        document.getElementById('studyNoteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveNote();
+        });
+
+        function saveNote() {
+            // Get the full content from the form
+            const noteData = {
+                title: document.getElementById('noteTitle').value,
+                content: document.getElementById('noteContent').value,
+                timestamp: new Date().toISOString()
+            };
+
+            console.log('Saving note data:', noteData); // Debug log
+
+            // Get existing notes array or create new one
+            let savedNotes = [];
+            try {
+                savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            } catch (e) {
+                console.error('Error parsing saved notes:', e);
+            }
+
+            // Add new note to beginning of array
+            savedNotes.unshift(noteData);
+
+            // Save back to localStorage
+            try {
+                localStorage.setItem('studyNotes', JSON.stringify(savedNotes));
+                console.log('Notes saved successfully:', savedNotes); // Debug log
+            } catch (e) {
+                console.error('Error saving notes:', e);
+            }
+
+            // Update status
+            const summaryStatus = document.getElementById('summaryStatus');
+            summaryStatus.textContent = 'Note saved successfully!';
+            summaryStatus.className = 'summary-status success';
+
+            // Refresh notes list if visible
+            if (document.getElementById('notesList').style.display !== 'none') {
+                loadNotes();
+            }
+        }
+
+        function loadNotes() {
+            const notesList = document.getElementById('notesList');
+            let savedNotes = [];
+
+            try {
+                savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+                console.log('Retrieved notes:', savedNotes);
+            } catch (e) {
+                console.error('Error loading notes:', e);
+            }
+
+            if (savedNotes.length === 0) {
+                notesList.innerHTML = '<p style="color: #aaa; text-align: center;">No saved notes found</p>';
+                return;
+            }
+
+            notesList.innerHTML = `
+                <div class="notes-controls">
+                    <button id="toggleDeleteMode" class="delete-mode-btn" onclick="toggleDeleteMode()">Delete Mode</button>
+                </div>
+                ${savedNotes.map((note, index) => `
+                    <div class="note-item" data-index="${index}" onclick="handleNoteClick(${index})">
+                        <div class="note-content">
+                            <h4>${note.title || 'Untitled Note'}</h4>
+                            <p>${new Date(note.timestamp).toLocaleString()}</p>
+                            <p class="note-preview">${note.content ? note.content.substring(0, 100) + '...' : 'No content'}</p>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+
+            notesList.style.display = 'block';
+        }
+
+        // Add these new functions
+        let deleteMode = false;
+
+        function toggleDeleteMode() {
+            deleteMode = !deleteMode;
+            const deleteBtn = document.getElementById('toggleDeleteMode');
+            deleteBtn.textContent = deleteMode ? 'Cancel Delete' : 'Delete Mode';
+            deleteBtn.classList.toggle('active');
+            
+            // Update status message
+            const summaryStatus = document.getElementById('summaryStatus');
+            if (deleteMode) {
+                summaryStatus.textContent = 'Click on a note to delete it';
+                summaryStatus.className = 'summary-status warning';
+            } else {
+                summaryStatus.textContent = '';
+                summaryStatus.className = 'summary-status';
+            }
+        }
+
+        function handleNoteClick(index) {
+            if (deleteMode) {
+                // Handle deletion
+                if (confirm('Are you sure you want to delete this note?')) {
+                    try {
+                        let savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+                        savedNotes.splice(index, 1);
+                        localStorage.setItem('studyNotes', JSON.stringify(savedNotes));
+                        
+                        const summaryStatus = document.getElementById('summaryStatus');
+                        summaryStatus.textContent = 'Note deleted successfully!';
+                        summaryStatus.className = 'summary-status success';
+                        
+                        loadNotes();
+                    } catch (e) {
+                        console.error('Error deleting note:', e);
+                    }
+                }
+            } else {
+                // Normal note loading
+                loadNote(index);
+            }
+        }
+
+        function loadNote(index) {
+            try {
+                const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+                console.log('Loading note at index:', index); // Debug log
+                console.log('Available notes:', savedNotes); // Debug log
+
+                if (savedNotes[index]) {
+                    const note = savedNotes[index];
+                    console.log('Note to load:', note); // Debug log
+
+                    // Set the values directly
+                    document.getElementById('noteTitle').value = note.title || '';
+                    document.getElementById('noteContent').value = note.content || '';
+
+                    // Hide notes list
+                    document.getElementById('notesList').style.display = 'none';
+
+                    // Update status
+                    const summaryStatus = document.getElementById('summaryStatus');
+                    summaryStatus.textContent = 'Note loaded successfully!';
+                    summaryStatus.className = 'summary-status success';
+                }
+            } catch (e) {
+                console.error('Error loading note:', e);
+            }
+        }
+
+        // Add click handler for load button if not already added
+        document.getElementById('loadNotesBtn').addEventListener('click', function() {
+            const notesList = document.getElementById('notesList');
+            if (notesList.style.display === 'none') {
+                loadNotes();
+            } else {
+                notesList.style.display = 'none';
+            }
+        });
+
+        async function summarizeYouTubeVideo(url) {
+            const summaryStatus = document.getElementById('summaryStatus');
+            const noteContent = document.getElementById('noteContent');
+            
+            try {
+                if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+                    throw new Error('Please enter a valid YouTube URL');
+                }
+
+                summaryStatus.textContent = 'Analyzing video...';
+                summaryStatus.className = 'summary-status loading';
+
+                const response = await fetch('/api/summarize-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error + (data.details ? '\n\n' + data.details : ''));
+                }
+
+                // Format the summary with video information
+                const formattedSummary = `
+Video Title: ${data.videoInfo.title}
+Duration: ${data.videoInfo.duration}
+Views: ${data.videoInfo.views.toLocaleString()}
+
+Summary:
+${data.summary}
+                `.trim();
+
+                noteContent.value = formattedSummary;
+                summaryStatus.textContent = 'Summary generated successfully!';
+                summaryStatus.className = 'summary-status success';
+
+            } catch (error) {
+                console.error('Summary error:', error);
+                summaryStatus.textContent = error.message;
+                summaryStatus.className = 'summary-status error';
+                noteContent.value = '';
+            }
+        }
+
+        // Add click handler for the summarize button
+        document.getElementById('summarizeBtn').addEventListener('click', async () => {
+            const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+            if (!youtubeUrl) {
+                alert('Please enter a YouTube URL');
+                return;
+            }
+            await summarizeYouTubeVideo(youtubeUrl);
+        });
+    </script>
+</body>
+</html>
