@@ -697,17 +697,17 @@
                     },
                     body: JSON.stringify({ 
                         message,
-                        username: username
+                        username: localStorage.getItem('username')
                     }),
                     credentials: 'include'
                 });
 
-                const data = await response.json();
-                
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to get AI response');
+                    throw new Error(`Server responded with ${response.status}`);
                 }
 
+                const data = await response.json();
+                
                 if (data.reply) {
                     appendMessage('ai', data.reply);
                 } else {
