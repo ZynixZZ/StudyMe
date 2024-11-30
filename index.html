@@ -221,10 +221,61 @@
                 opacity: 1;
             }
         }
+
+        .username-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .username-popup form {
+            background: rgba(25, 25, 25, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            text-align: center;
+        }
+
+        .username-popup h3 {
+            margin: 0 0 20px 0;
+            color: #fff;
+        }
+
+        .username-popup input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        .username-popup button {
+            width: 100%;
+        }
     </style>
 </head>
 
 <body>
+    <div id="usernamePopup" class="username-popup">
+        <form id="usernameForm">
+            <h3>Enter Your Username</h3>
+            <input type="text" id="usernameInput" placeholder="Enter username..." required>
+            <button type="submit">Start Chatting</button>
+        </form>
+    </div>
+    
+    <div class="cyber-lines"></div>
+
     <div id="auth-container" class="auth-overlay">
         <div class="auth-box">
             <!-- Login Form -->
@@ -253,33 +304,70 @@
 </body>
 
 <script>
-    function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+    let username = '';
 
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.email === email && u.password === password);
+    function showUsernamePopup() {
+        console.log('Showing username popup');
+        const popup = document.getElementById('usernamePopup');
+        if (!popup) {
+            console.error('Username popup element not found!');
+            return;
+        }
+        popup.style.display = 'flex';
+        document.getElementById('chatWidget').style.display = 'none';
+    }
 
-        if (user) {
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            
-            // Create and show success popup
-            const popup = document.createElement('div');
-            popup.className = 'success-popup';
-            popup.innerHTML = `
-                <div class="popup-content">
-                    <h2>Login Successful!</h2>
-                    <p>Welcome back, ${user.username}!</p>
-                </div>
-            `;
-            document.body.appendChild(popup);
+    function hideUsernamePopup() {
+        document.getElementById('usernamePopup').style.display = 'none';
+        document.getElementById('chatWidget').style.display = 'block';
+    }
 
-            // Redirect after showing popup
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 2000); // Redirect after 2 seconds
+    document.getElementById('usernameForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        username = document.getElementById('usernameInput').value.trim();
+        if (username) {
+            localStorage.setItem('chatUsername', username);
+            hideUsernamePopup();
+            initializeChat();
+        }
+    });
+
+    window.addEventListener('load', () => {
+        console.log('Page loaded');
+        console.log('Checking for saved username...');
+        const savedUsername = localStorage.getItem('chatUsername');
+        console.log('Saved username:', savedUsername);
+        
+        if (!savedUsername) {
+            console.log('No username found, showing popup');
+            showUsernamePopup();
         } else {
-            alert('Invalid credentials');
+            console.log('Username found:', savedUsername);
+            username = savedUsername;
+            initializeChat();
+        }
+        testAIConnection();
+    });
+
+    function initializeChat() {
+        // Initialize your chat here
+        socket = connectWebSocket();
+        // You can add any other chat initialization code here
+    }
+
+    function sendChatMessage() {
+        const chatInput = document.getElementById('chatInput');
+        const message = chatInput.value.trim();
+        
+        if (message && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'chat',
+                message: message,
+                sender: username
+            }));
+            
+            displayChatMessage('You', message);
+            chatInput.value = '';
         }
     }
 </script>
