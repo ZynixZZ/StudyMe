@@ -5,7 +5,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { google } = require('googleapis');
 const { YoutubeTranscript } = require('youtube-transcript');
 
 const app = express();
@@ -29,12 +28,6 @@ console.log('YouTube API Key Check:');
 console.log('Key exists:', !!process.env.YOUTUBE_API_KEY);
 console.log('Key length:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0);
 console.log('Key starts with:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none');
-
-// Initialize YouTube client differently
-const youtube = google.youtube({
-    version: 'v3',
-    auth: process.env.YOUTUBE_API_KEY
-});
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
