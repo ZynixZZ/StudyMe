@@ -137,7 +137,18 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Extract video ID
+        // Verify environment variables
+        if (!process.env.YOUTUBE_API_KEY) {
+            console.error('YOUTUBE_API_KEY is not set');
+            return res.status(500).json({ error: 'YouTube API configuration error' });
+        }
+
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set');
+            return res.status(500).json({ error: 'Gemini API configuration error' });
+        }
+
+        // Extract video ID with better error handling
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -156,32 +167,40 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Fetch video details from YouTube API
-        const videoData = await youtube.videos.list({
-            key: process.env.YOUTUBE_API_KEY,
-            part: ['snippet', 'statistics', 'contentDetails'],
-            id: [videoId]
-        });
+        // Fetch video details with error handling
+        let videoData;
+        try {
+            videoData = await youtube.videos.list({
+                key: process.env.YOUTUBE_API_KEY,
+                part: ['snippet', 'statistics', 'contentDetails'],
+                id: [videoId]
+            });
+            console.log('YouTube API response received');
+        } catch (error) {
+            console.error('YouTube API error:', error);
+            return res.status(500).json({ error: 'Failed to fetch video data from YouTube' });
+        }
 
         if (!videoData.data.items || videoData.data.items.length === 0) {
-            return res.status(404).json({ error: 'Video not found' });
+            return res.status(404).json({ error: 'Video not found or is private' });
         }
 
         const video = videoData.data.items[0];
         const videoInfo = {
-            title: video.snippet.title,
-            description: video.snippet.description,
+            title: video.snippet.title || 'Untitled',
+            description: video.snippet.description || 'No description available',
             publishedAt: video.snippet.publishedAt,
-            channelTitle: video.snippet.channelTitle,
+            channelTitle: video.snippet.channelTitle || 'Unknown channel',
             tags: video.snippet.tags || [],
-            viewCount: video.statistics.viewCount,
-            duration: video.contentDetails.duration
+            viewCount: video.statistics.viewCount || '0',
+            duration: video.contentDetails.duration || 'Unknown duration'
         };
 
-        if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY is not set');
-            return res.status(500).json({ error: 'AI service configuration error' });
-        }
+        console.log('Video info extracted:', {
+            title: videoInfo.title,
+            channel: videoInfo.channelTitle,
+            id: videoId
+        });
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
@@ -191,9 +210,7 @@ VIDEO DETAILS:
 Title: ${videoInfo.title}
 Channel: ${videoInfo.channelTitle}
 Published: ${videoInfo.publishedAt}
-Duration: ${videoInfo.duration}
 Views: ${videoInfo.viewCount}
-Tags: ${videoInfo.tags.join(', ')}
 
 Description:
 ${videoInfo.description}
@@ -203,31 +220,24 @@ Please provide a structured summary of THIS SPECIFIC video using the above infor
 TITLE: ${videoInfo.title}
 
 MAIN TOPICS:
-• [Extract 3-4 main topics from the video's description and tags]
+• [Extract 3-4 main topics from the video's description]
 
 KEY POINTS:
 • [List 3-5 key points based on the video's description]
 
 DETAILED SUMMARY:
-[2-3 paragraphs summarizing the video's content based on its description]
+[2-3 paragraphs summarizing the video's content]`;
 
-CONTEXT:
-• Channel: ${videoInfo.channelTitle}
-• Published: ${videoInfo.publishedAt}
-• Views: ${videoInfo.viewCount}
-
-Use ONLY the information provided above about this specific video.`;
-
-        console.log('Sending prompt to Gemini for video:', videoId);
+        console.log('Sending prompt to Gemini');
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
 
-        console.log('Summary generated for video:', videoId);
+        console.log('Summary generated successfully');
         res.status(200).json({ summary });
 
     } catch (error) {
-        console.error('Detailed error:', {
+        console.error('Detailed summarizer error:', {
             message: error.message,
             stack: error.stack,
             name: error.name
