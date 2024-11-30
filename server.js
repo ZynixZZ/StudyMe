@@ -1,5 +1,4 @@
 require('dotenv').config();
-const axios = require('axios');
 
 const express = require('express');
 const http = require('http');
@@ -7,6 +6,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { YoutubeTranscript } = require('youtube-transcript');
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -179,34 +179,37 @@ app.post('/api/summarize', async (req, res) => {
         // Fetch video details from RapidAPI
         const options = {
             method: 'GET',
-            url: 'https://youtube-v3-alternative.p.rapidapi.com/video',
-            params: { id: videoId },
+            url: 'https://youtube-v31.p.rapidapi.com/videos',  // Updated endpoint
+            params: {
+                part: 'contentDetails,snippet,statistics',
+                id: videoId
+            },
             headers: {
                 'X-RapidAPI-Key': process.env.RAPID_API_KEY,
-                'X-RapidAPI-Host': 'youtube-v3-alternative.p.rapidapi.com'
+                'X-RapidAPI-Host': 'youtube-v31.p.rapidapi.com'  // Updated host
             }
         };
 
         console.log('Fetching video data from RapidAPI');
         const apiResponse = await axios.request(options);
         
-        // Add debug logging
-        console.log('API Response structure:', JSON.stringify(apiResponse.data, null, 2));
-
-        // Check if we have valid data
-        if (!apiResponse.data || !apiResponse.data.title) {
-            throw new Error('Invalid response from YouTube API');
+        // Debug logging
+        console.log('Raw API Response:', apiResponse.data);
+        
+        if (!apiResponse.data || !apiResponse.data.items || !apiResponse.data.items[0]) {
+            throw new Error('Invalid or empty response from YouTube API');
         }
 
-        const videoInfo = apiResponse.data;
+        const videoInfo = apiResponse.data.items[0].snippet;
+        const statistics = apiResponse.data.items[0].statistics;
 
         // Create prompt for Gemini
         const prompt = `Analyze this YouTube video based on its metadata:
 
 VIDEO DETAILS:
 Title: ${videoInfo.title || 'Unknown Title'}
-Channel: ${videoInfo.author || 'Unknown Channel'}
-Views: ${videoInfo.viewCount || 'Unknown Views'}
+Channel: ${videoInfo.channelTitle || 'Unknown Channel'}
+Views: ${statistics.viewCount || 'Unknown Views'}
 Description: ${videoInfo.description || 'No description available'}
 
 Please provide a structured summary:
@@ -237,7 +240,8 @@ TAKEAWAYS:
             message: error.message,
             stack: error.stack,
             name: error.name,
-            apiKey: process.env.RAPID_API_KEY ? 'Present' : 'Missing'
+            apiKey: process.env.RAPID_API_KEY ? 'Present' : 'Missing',
+            apiKeyLength: process.env.RAPID_API_KEY ? process.env.RAPID_API_KEY.length : 0
         });
         
         res.status(500).json({ 
