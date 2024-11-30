@@ -157,22 +157,23 @@
     </div>
 
     <script>
-        document.getElementById('signupForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function signup(event) {
+            event.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
-
+            
+            const errorElement = document.getElementById('error-message');
+            errorElement.style.display = 'none';
+            
+            if (password !== confirmPassword) {
+                showError('Passwords do not match');
+                return;
+            }
+            
             try {
-                if (password !== confirmPassword) {
-                    errorMessage.textContent = 'Passwords do not match';
-                    successMessage.textContent = '';
-                    return;
-                }
-
+                console.log('Attempting signup...');
                 const response = await fetch('/api/signup', {
                     method: 'POST',
                     headers: {
@@ -181,24 +182,28 @@
                     body: JSON.stringify({ username, password })
                 });
 
+                console.log('Response status:', response.status);
                 const data = await response.json();
-
-                if (data.success) {
-                    successMessage.textContent = 'Account created successfully!';
-                    errorMessage.textContent = '';
-                    setTimeout(() => {
-                        window.location.href = '/login.html';
-                    }, 2000);
-                } else {
-                    errorMessage.textContent = data.error || 'Signup failed';
-                    successMessage.textContent = '';
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Signup failed');
                 }
+
+                // Success! Redirect to dashboard
+                console.log('Signup successful, redirecting to dashboard...');
+                window.location.href = '/dashboard';
+                
             } catch (error) {
                 console.error('Signup error:', error);
-                errorMessage.textContent = 'System Error - Please Try Again';
-                successMessage.textContent = '';
+                showError(error.message || 'Failed to create account');
             }
-        });
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
     </script>
 </body>
 </html> 
