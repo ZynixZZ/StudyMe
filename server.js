@@ -60,6 +60,44 @@ app.post('/api/ai-server', async (req, res) => {
     }
 });
 
+// Add this with your other endpoints
+app.post('/api/summarize', async (req, res) => {
+    try {
+        const { videoUrl, username } = req.body;
+        console.log('Summary request from:', username, 'URL:', videoUrl);
+
+        if (!videoUrl) {
+            return res.status(400).json({ error: 'Video URL is required' });
+        }
+
+        // Ensure the API key is set
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set');
+            return res.status(500).json({ error: 'AI service configuration error' });
+        }
+
+        // Get Gemini model
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        // Create prompt for summarization
+        const prompt = `Please provide a concise summary of this YouTube video: ${videoUrl}. 
+                       Focus on the main points and key takeaways.`;
+
+        // Generate summary from Gemini
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const summary = response.text();
+
+        console.log('Summary generated:', summary);
+        res.status(200).json({ summary });
+
+    } catch (error) {
+        console.error('Summary error:', error.message);
+        console.error('Stack trace:', error.stack);
+        res.status(500).json({ error: 'Failed to generate summary' });
+    }
+});
+
 // WebSocket setup
 const wss = new WebSocket.Server({ server });
 
