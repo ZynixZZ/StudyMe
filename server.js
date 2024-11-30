@@ -135,7 +135,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Extract video ID
+        // Extract video ID and validate URL
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -148,7 +148,7 @@ app.post('/api/summarize', async (req, res) => {
             if (!videoId) {
                 throw new Error('Could not extract video ID');
             }
-            console.log('Extracted video ID:', videoId);
+            console.log('Processing video ID:', videoId);
         } catch (error) {
             console.error('URL parsing error:', error);
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
@@ -161,33 +161,47 @@ app.post('/api/summarize', async (req, res) => {
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        const prompt = `You are a YouTube video summarizer. For the video at ${videoUrl} (ID: ${videoId}), please:
+        // Create a more specific prompt that forces focus on the given video
+        const prompt = `Task: Analyze ONLY this specific YouTube video: ${videoUrl} (ID: ${videoId})
 
-1. Analyze the video title, URL, and any available metadata
-2. Provide a structured summary in this format:
+IMPORTANT INSTRUCTIONS:
+1. Focus EXCLUSIVELY on the video with ID ${videoId}
+2. Do NOT provide generic information
+3. Do NOT analyze any other videos
+4. If you cannot access the specific video, please state that clearly
 
-ANALYSIS OF VIDEO ${videoId}:
+Please provide a structured analysis in this format:
+
+VIDEO ID BEING ANALYZED: ${videoId}
+
+VERIFICATION:
+• Confirm this is the video URL being analyzed: ${videoUrl}
+• Video ID confirmed: ${videoId}
 
 MAIN TOPICS:
-• [List 3-4 likely main topics based on the video URL and context]
+• [List 3-4 main topics from this specific video]
 
-SUGGESTED KEY POINTS:
-• [List 3-5 potential key points that might be covered]
+KEY POINTS:
+• [List 3-5 key points made in this exact video]
 
-SUMMARY:
-[2-3 paragraphs analyzing what this video likely covers, based on its URL and context]
+DETAILED SUMMARY:
+[Provide 2-3 paragraphs specifically about this video's content]
 
-POTENTIAL TAKEAWAYS:
-• [List 2-3 likely takeaways from this type of video]
+IMPORTANT NOTE: If you cannot access or analyze this specific video, please respond with "Unable to access video content" instead of providing generic information.
 
-Note: This is an AI-generated analysis based on the video URL. For the most accurate information, please watch the video directly.`;
+Remember: Only analyze video ${videoId} and no other content.`;
 
-        console.log('Sending prompt to Gemini');
+        console.log('Sending prompt to Gemini for video:', videoId);
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
 
-        console.log('Summary generated successfully');
+        // Verify the summary mentions the correct video ID
+        if (!summary.includes(videoId)) {
+            console.warn('Summary may not be specific to requested video');
+        }
+
+        console.log('Summary generated for video:', videoId);
         res.status(200).json({ summary });
 
     } catch (error) {
