@@ -14,13 +14,18 @@ const PORT = process.env.PORT || 3000;
 // Add this console log to show server is initializing
 console.log('Starting server...');
 
+// Add this near the top of your file, after your requires
+console.log('Environment variables check on startup:');
+console.log('YOUTUBE_API_KEY present:', !!process.env.YOUTUBE_API_KEY);
+console.log('GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY);
+
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Initialize YouTube client with API key
 const youtube = google.youtube({
     version: 'v3',
-    auth: process.env.YOUTUBE_API_KEY
+    auth: process.env.YOUTUBE_API_KEY || console.error('YouTube API key not found!')
 });
 
 // Middleware
@@ -137,15 +142,16 @@ app.post('/api/summarize', async (req, res) => {
     try {
         const { videoUrl, username } = req.body;
         console.log('Summary request from:', username, 'URL:', videoUrl);
+        console.log('Checking API keys:');
+        console.log('- YOUTUBE_API_KEY:', process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing');
+        console.log('- GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
 
-        if (!videoUrl) {
-            return res.status(400).json({ error: 'Video URL is required' });
-        }
-
-        // Verify API keys
         if (!process.env.YOUTUBE_API_KEY) {
-            console.error('YOUTUBE_API_KEY is not set');
-            return res.status(500).json({ error: 'YouTube API configuration error' });
+            console.error('YOUTUBE_API_KEY is missing in environment');
+            return res.status(500).json({ 
+                error: 'YouTube API configuration error',
+                details: 'API key not found in environment variables'
+            });
         }
 
         if (!process.env.GEMINI_API_KEY) {
@@ -239,7 +245,10 @@ DETAILED SUMMARY:
             message: error.message,
             stack: error.stack,
             name: error.name,
-            youtubeKey: process.env.YOUTUBE_API_KEY ? 'Set' : 'Not Set'
+            environmentCheck: {
+                youtubeKey: process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing',
+                geminiKey: process.env.GEMINI_API_KEY ? 'Present' : 'Missing'
+            }
         });
         
         res.status(500).json({ 
