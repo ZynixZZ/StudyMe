@@ -5,7 +5,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { YoutubeTranscript } = require('youtube-transcript');
+const { google } = require('googleapis');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +31,12 @@ console.log('Key starts with:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUB
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Initialize YouTube client
+const youtube = google.youtube({
+    version: 'v3',
+    auth: process.env.YOUTUBE_API_KEY
+});
 
 // Middleware
 app.use(express.json());
@@ -151,6 +157,11 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
+        if (!process.env.YOUTUBE_API_KEY) {
+            console.error('YOUTUBE_API_KEY is not set');
+            return res.status(500).json({ error: 'YouTube API configuration error' });
+        }
+
         // Extract video ID
         let videoId;
         try {
@@ -170,56 +181,13 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Get video transcript
-        console.log('Fetching transcript for video:', videoId);
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-        
-        if (!transcript || transcript.length === 0) {
-            return res.status(400).json({ 
-                error: 'Could not get video transcript. The video might be unavailable or have no captions.' 
-            });
-        }
+        // Fetch video details from YouTube API
+        console.log('Fetching video data with API key:', process.env.YOUTUBE_API_KEY.substring(0, 6) + '...');
+        const videoData = await youtube.videos.list({
+            part: ['snippet', 'statistics', 'contentDetails'],
+            id: [
 
-        // Combine transcript text
-        const fullText = transcript
-            .map(entry => entry.text)
-            .join(' ')
-            .substring(0, 5000); // Limit length for API
-
-        // Use Gemini to summarize
-        if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY is not set');
-            return res.status(500).json({ error: 'AI service configuration error' });
-        }
-
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-        const prompt = `Please provide a structured summary of this YouTube video transcript:
-
-TRANSCRIPT:
-${fullText}
-
-Please format the summary as follows:
-
-MAIN TOPICS:
-• [List 3-4 main topics covered]
-
-KEY POINTS:
-• [List 4-5 key points from the video]
-
-DETAILED SUMMARY:
-[2-3 paragraphs summarizing the main content]
-
-TAKEAWAYS:
-• [List 2-3 main takeaways]`;
-
-        console.log('Sending prompt to Gemini');
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const summary = response.text();
-
-        console.log('Summary generated successfully');
-        res.status(200).json({ summary });
+        });
 
     } catch (error) {
         console.error('Detailed summarizer error:', {
