@@ -224,12 +224,11 @@
                 localStorage.setItem('chatUsername', username);
 
                 // Show success message
-                errorElement.textContent = 'Login successful! Redirecting to dashboard...';
+                errorElement.textContent = 'Login successful! Redirecting...';
                 errorElement.style.display = 'block';
                 errorElement.className = 'success';
 
-                // Force redirect to dashboard.html
-                console.log('Redirecting to dashboard...');
+                // Update redirect to explicitly use .html
                 window.location.replace('/dashboard.html');
                 
             } catch (error) {

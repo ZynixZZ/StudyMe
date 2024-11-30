@@ -182,13 +182,12 @@
                 errorElement.style.display = 'block';
                 errorElement.className = 'success';
 
-                // Redirect after a short delay
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1500);
+                // Update redirect to explicitly use .html
+                window.location.replace('/dashboard.html');
                 
             } catch (error) {
-                errorElement.textContent = error.message || 'Failed to create account';
+                console.error('Signup error:', error);
+                errorElement.textContent = error.message;
                 errorElement.style.display = 'block';
                 errorElement.className = 'error';
             }
