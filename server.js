@@ -7,6 +7,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const WebSocket = require('ws');
 const http = require('http');
 const crypto = require('crypto');
+const youtubedl = require('youtube-dl-exec');
 
 // Initialize Express
 const app = express();
@@ -189,25 +190,116 @@ app.post('/api/ai-chat', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        console.log('Attempting AI chat with message:', message);
+        console.log('Received message:', message);
 
-        // Use the hosted Gemini Pro model
+        // Use the Gemini Pro model
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         
-        // Generate content
-        const result = await model.generateContent(message);
-        const response = await result.response;
-        const text = response.text();
-        
-        console.log('AI Response received:', text.substring(0, 100) + '...');
-        
-        res.json({ reply: text });
-        
+        // Generate content with proper error handling
+        try {
+            const result = await model.generateContent(message);
+            
+            // Wait for the response
+            const response = await result.response;
+            
+            // Get the text and verify it exists
+            const text = response.text();
+            
+            console.log('AI Response:', text);
+
+            if (!text) {
+                throw new Error('Empty response from AI');
+            }
+
+            // Send the response
+            res.json({ 
+                reply: text,
+                status: 'success'
+            });
+
+        } catch (aiError) {
+            console.error('AI Generation error:', aiError);
+            res.status(500).json({
+                error: 'AI Generation failed',
+                details: aiError.message,
+                status: 'error'
+            });
+        }
+
     } catch (error) {
-        console.error('AI Chat error:', error);
-        res.status(500).json({ 
-            error: 'Failed to get AI response',
-            details: error.message 
+        console.error('Server error:', error);
+        res.status(500).json({
+            error: 'Server error occurred',
+            details: error.message,
+            status: 'error'
+        });
+    }
+});
+
+// Add this with your other routes
+app.post('/api/summarize-video', async (req, res) => {
+    try {
+        const { videoUrl } = req.body;
+        
+        if (!videoUrl) {
+            return res.status(400).json({ error: 'Video URL is required' });
+        }
+
+        console.log('Processing URL:', videoUrl);
+
+        // Extract video info using youtube-dl
+        try {
+            const videoInfo = await youtubedl(videoUrl, {
+                dumpSingleJson: true,
+                noWarnings: true,
+                noCallHome: true,
+                preferFreeFormats: true,
+                youtubeSkipDashManifest: true
+            });
+
+            // Combine title and description for AI analysis
+            const videoContent = `
+                Title: ${videoInfo.title}
+                Channel: ${videoInfo.channel}
+                Description: ${videoInfo.description}
+                Duration: ${videoInfo.duration} seconds
+            `;
+
+            // Use AI to analyze the content
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+            
+            const prompt = `Please provide a detailed summary of this YouTube video based on its title and description: ${videoContent}. 
+                          Include the main topics, key points, and any important information mentioned in the description.`;
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const summary = response.text();
+
+            console.log('Summary generated successfully');
+            
+            res.json({ 
+                summary,
+                status: 'success',
+                videoInfo: {
+                    title: videoInfo.title,
+                    channel: videoInfo.channel,
+                    duration: videoInfo.duration
+                }
+            });
+
+        } catch (videoError) {
+            console.error('Video info error:', videoError);
+            res.status(400).json({
+                error: 'Could not get video information. Please check the URL and try again.',
+                details: videoError.message
+            });
+        }
+
+    } catch (error) {
+        console.error('Summarization error:', error);
+        res.status(500).json({
+            error: 'Failed to summarize video',
+            details: error.message
         });
     }
 });

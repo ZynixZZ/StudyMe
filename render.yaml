@@ -1,9 +1,11 @@
 services:
   - type: web
-    name: your-app-name
+    name: studyme
     env: node
-    buildCommand: npm install
+    buildCommand: |
+      npm install
+      python3 -m pip install --upgrade yt-dlp
     startCommand: node server.js
     envVars:
-      - key: PALM_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
