@@ -1,71 +1,32 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-// Add this to parse JSON requests
+// Add this console log to show server is initializing
+console.log('Starting server...');
+
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Middleware
 app.use(express.json());
+app.use(express.static('public'));
 
-// Add your signup endpoint
-app.post('/api/signup', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        console.log('Signup attempt:', { username });
-
-        // Add validation
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required' });
-        }
-
-        // Here you would typically:
-        // 1. Check if username already exists
-        // 2. Hash the password
-        // 3. Save to database
-        // For now, we'll just send back success
-
-        res.status(200).json({ 
-            message: 'Signup successful',
-            username: username
-        });
-
-    } catch (error) {
-        console.error('Signup error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+// Add more console logs for debugging
+app.use((req, res, next) => {
+    console.log(`${req.method} request to ${req.url}`);
+    next();
 });
 
-// Add your login endpoint
-app.post('/api/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        console.log('Login attempt:', { username });
-
-        // Add validation
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required' });
-        }
-
-        // Here you would typically:
-        // 1. Verify username exists
-        // 2. Verify password matches
-        // For now, we'll just send back success
-
-        res.status(200).json({ 
-            message: 'Login successful',
-            username: username
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Add this near your other API endpoints
+// AI endpoint
 app.post('/api/ai-server', async (req, res) => {
     try {
         const { message, username } = req.body;
@@ -75,89 +36,54 @@ app.post('/api/ai-server', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // Here you would typically:
-        // 1. Call your AI service
-        // 2. Process the response
-        // For now, let's send a simple response
-        const reply = `AI Response: I received your message: "${message}"`;
+        // Ensure the API key is set
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set');
+            return res.status(500).json({ error: 'AI service configuration error' });
+        }
 
-        res.status(200).json({ 
-            reply: reply,
-            username: username
-        });
+        // Get Gemini model
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        // Generate response from Gemini
+        const result = await model.generateContent(message);
+        const response = await result.response;
+        const reply = response.text();
+
+        console.log('AI response:', reply);
+        res.status(200).json({ reply });
 
     } catch (error) {
-        console.error('AI server error:', error);
+        console.error('AI server error:', error.message);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({ error: 'Failed to get AI response' });
     }
 });
 
-// Serve static files from 'public' directory
-app.use(express.static('public'));
-
-// Routes
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
 // WebSocket setup
 const wss = new WebSocket.Server({ server });
-const clients = new Map();
 
 wss.on('connection', (ws) => {
-    console.log('New client connected');
+    console.log('New WebSocket connection');  // Add this log
 
     ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            console.log('Received:', data);
-
-            switch (data.type) {
-                case 'connection':
-                    clients.set(ws, data.username);
-                    broadcastMessage({
-                        type: 'connection',
-                        username: data.username,
-                        message: `${data.username} joined the chat`
-                    });
-                    break;
-
-                case 'chat':
-                    broadcastMessage({
-                        type: 'chat',
-                        username: data.username,
-                        message: data.message
-                    });
-                    break;
-            }
-        } catch (error) {
-            console.error('Error processing message:', error);
-        }
-    });
-
-    ws.on('close', () => {
-        const username = clients.get(ws);
-        clients.delete(ws);
-        if (username) {
-            broadcastMessage({
-                type: 'disconnection',
-                username: username,
-                message: `${username} left the chat`
-            });
-        }
-        console.log('Client disconnected');
+        console.log('Received:', message);  // Add this log
+        // Your existing WebSocket message handling
     });
 });
 
-function broadcastMessage(message) {
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(message));
-        }
-    });
-}
-
+// Start server
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`http://localhost:${PORT}`);
+});
+
+// Add error handling
+server.on('error', (error) => {
+    console.error('Server error:', error);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
 });
 
