@@ -1,11 +1,12 @@
 require('dotenv').config();
+const axios = require('axios');
 
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { google } = require('googleapis');
+const { YoutubeTranscript } = require('youtube-transcript');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,12 +32,6 @@ console.log('Key starts with:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUB
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Initialize YouTube client
-const youtube = google.youtube({
-    version: 'v3',
-    auth: process.env.YOUTUBE_API_KEY
-});
 
 // Middleware
 app.use(express.json());
@@ -157,8 +152,8 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        if (!process.env.YOUTUBE_API_KEY) {
-            console.error('YOUTUBE_API_KEY is not set');
+        if (!process.env.RAPID_API_KEY) {
+            console.error('RAPID_API_KEY is not set');
             return res.status(500).json({ error: 'YouTube API configuration error' });
         }
 
@@ -181,19 +176,68 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Fetch video details from YouTube API
-        console.log('Fetching video data with API key:', process.env.YOUTUBE_API_KEY.substring(0, 6) + '...');
-        const videoData = await youtube.videos.list({
-            part: ['snippet', 'statistics', 'contentDetails'],
-            id: [
+        // Fetch video details from RapidAPI
+        const options = {
+            method: 'GET',
+            url: 'https://youtube-v3-alternative.p.rapidapi.com/video',
+            params: { id: videoId },
+            headers: {
+                'X-RapidAPI-Key': process.env.RAPID_API_KEY,
+                'X-RapidAPI-Host': 'youtube-v3-alternative.p.rapidapi.com'
+            }
+        };
 
-        });
+        console.log('Fetching video data from RapidAPI');
+        const apiResponse = await axios.request(options);
+        
+        // Add debug logging
+        console.log('API Response structure:', JSON.stringify(apiResponse.data, null, 2));
+
+        // Check if we have valid data
+        if (!apiResponse.data || !apiResponse.data.title) {
+            throw new Error('Invalid response from YouTube API');
+        }
+
+        const videoInfo = apiResponse.data;
+
+        // Create prompt for Gemini
+        const prompt = `Analyze this YouTube video based on its metadata:
+
+VIDEO DETAILS:
+Title: ${videoInfo.title || 'Unknown Title'}
+Channel: ${videoInfo.author || 'Unknown Channel'}
+Views: ${videoInfo.viewCount || 'Unknown Views'}
+Description: ${videoInfo.description || 'No description available'}
+
+Please provide a structured summary:
+
+MAIN TOPICS:
+• [Extract 3-4 main topics from the video's description]
+
+KEY POINTS:
+• [List 4-5 key points based on the video's content]
+
+DETAILED SUMMARY:
+[2-3 paragraphs summarizing the main content]
+
+TAKEAWAYS:
+• [List 2-3 main takeaways]`;
+
+        console.log('Sending prompt to Gemini');
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const summary = response.text();
+
+        console.log('Summary generated successfully');
+        res.status(200).json({ summary });
 
     } catch (error) {
         console.error('Detailed summarizer error:', {
             message: error.message,
             stack: error.stack,
-            name: error.name
+            name: error.name,
+            apiKey: process.env.RAPID_API_KEY ? 'Present' : 'Missing'
         });
         
         res.status(500).json({ 
