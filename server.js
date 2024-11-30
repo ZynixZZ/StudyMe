@@ -6,6 +6,7 @@ const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
+const { YoutubeTranscript } = require('youtube-transcript');
 
 const app = express();
 const server = http.createServer(app);
@@ -157,13 +158,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Verify API key again at request time
-        if (!process.env.YOUTUBE_API_KEY) {
-            console.error('YouTube API key missing at request time');
-            return res.status(500).json({ error: 'YouTube API configuration error' });
-        }
-
-        // Extract video ID with logging
+        // Extract video ID
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -172,70 +167,58 @@ app.post('/api/summarize', async (req, res) => {
             } else if (url.hostname.includes('youtu.be')) {
                 videoId = url.pathname.slice(1);
             }
-            console.log('Extracted video ID:', videoId);
+            
+            if (!videoId) {
+                throw new Error('Could not extract video ID');
+            }
+            console.log('Processing video ID:', videoId);
         } catch (error) {
             console.error('URL parsing error:', error);
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Log the actual API call details
-        console.log('Making YouTube API request with:');
-        console.log('- Video ID:', videoId);
-        console.log('- API Key present:', !!process.env.YOUTUBE_API_KEY);
-
-        // Make the API call with explicit key
-        const videoData = await youtube.videos.list({
-            key: process.env.YOUTUBE_API_KEY,  // Explicitly include the key here
-            part: ['snippet', 'statistics', 'contentDetails'],
-            id: [videoId]
-        });
-
-        if (!videoData.data.items || videoData.data.items.length === 0) {
-            return res.status(404).json({ error: 'Video not found or is private' });
+        // Get video transcript
+        console.log('Fetching transcript for video:', videoId);
+        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+        
+        if (!transcript || transcript.length === 0) {
+            return res.status(400).json({ 
+                error: 'Could not get video transcript. The video might be unavailable or have no captions.' 
+            });
         }
 
-        const video = videoData.data.items[0];
-        const videoInfo = {
-            title: video.snippet.title || 'Untitled',
-            description: video.snippet.description || 'No description available',
-            publishedAt: video.snippet.publishedAt,
-            channelTitle: video.snippet.channelTitle || 'Unknown channel',
-            tags: video.snippet.tags || [],
-            viewCount: video.statistics.viewCount || '0',
-            duration: video.contentDetails.duration || 'Unknown duration'
-        };
+        // Combine transcript text
+        const fullText = transcript
+            .map(entry => entry.text)
+            .join(' ')
+            .substring(0, 5000); // Limit length for API
 
-        console.log('Video info extracted:', {
-            title: videoInfo.title,
-            channel: videoInfo.channelTitle,
-            id: videoId
-        });
+        // Use Gemini to summarize
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set');
+            return res.status(500).json({ error: 'AI service configuration error' });
+        }
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        const prompt = `Analyze this specific YouTube video based on its official metadata:
+        const prompt = `Please provide a structured summary of this YouTube video transcript:
 
-VIDEO DETAILS:
-Title: ${videoInfo.title}
-Channel: ${videoInfo.channelTitle}
-Published: ${videoInfo.publishedAt}
-Views: ${videoInfo.viewCount}
+TRANSCRIPT:
+${fullText}
 
-Description:
-${videoInfo.description}
-
-Please provide a structured summary of THIS SPECIFIC video using the above information:
-
-TITLE: ${videoInfo.title}
+Please format the summary as follows:
 
 MAIN TOPICS:
-• [Extract 3-4 main topics from the video's description]
+• [List 3-4 main topics covered]
 
 KEY POINTS:
-• [List 3-5 key points based on the video's description]
+• [List 4-5 key points from the video]
 
 DETAILED SUMMARY:
-[2-3 paragraphs summarizing the video's content]`;
+[2-3 paragraphs summarizing the main content]
+
+TAKEAWAYS:
+• [List 2-3 main takeaways]`;
 
         console.log('Sending prompt to Gemini');
         const result = await model.generateContent(prompt);
@@ -249,12 +232,7 @@ DETAILED SUMMARY:
         console.error('Detailed summarizer error:', {
             message: error.message,
             stack: error.stack,
-            name: error.name,
-            apiKeyCheck: {
-                exists: !!process.env.YOUTUBE_API_KEY,
-                length: process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0,
-                startsWith: process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none'
-            }
+            name: error.name
         });
         
         res.status(500).json({ 
