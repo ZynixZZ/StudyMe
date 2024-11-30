@@ -5,7 +5,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { YoutubeTranscript } = require('youtube-transcript');
 const axios = require('axios');
 
 const app = express();
@@ -152,9 +151,9 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        if (!process.env.RAPID_API_KEY) {
-            console.error('RAPID_API_KEY is not set');
-            return res.status(500).json({ error: 'YouTube API configuration error' });
+        if (!process.env.SERP_API_KEY) {
+            console.error('SERP_API_KEY is not set');
+            return res.status(500).json({ error: 'API configuration error' });
         }
 
         // Extract video ID
@@ -176,41 +175,35 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Fetch video details from RapidAPI
-        const options = {
-            method: 'GET',
-            url: 'https://youtube-v31.p.rapidapi.com/videos',  // Updated endpoint
-            params: {
-                part: 'contentDetails,snippet,statistics',
-                id: videoId
-            },
-            headers: {
-                'X-RapidAPI-Key': process.env.RAPID_API_KEY,
-                'X-RapidAPI-Host': 'youtube-v31.p.rapidapi.com'  // Updated host
-            }
+        // Fetch video details from SerpApi with updated query parameters
+        console.log('Fetching video data from SerpApi');
+        const apiUrl = `https://serpapi.com/search.json`;
+        const params = {
+            engine: 'youtube',
+            search_query: videoId,
+            api_key: process.env.SERP_API_KEY
         };
 
-        console.log('Fetching video data from RapidAPI');
-        const apiResponse = await axios.request(options);
+        console.log('Making API request with params:', { ...params, api_key: '***' });
         
-        // Debug logging
-        console.log('Raw API Response:', apiResponse.data);
+        const serpApiResponse = await axios.get(apiUrl, { params });
         
-        if (!apiResponse.data || !apiResponse.data.items || !apiResponse.data.items[0]) {
-            throw new Error('Invalid or empty response from YouTube API');
+        if (!serpApiResponse.data || !serpApiResponse.data.video_results) {
+            console.error('API Response:', serpApiResponse.data);
+            throw new Error('Invalid response from API');
         }
 
-        const videoInfo = apiResponse.data.items[0].snippet;
-        const statistics = apiResponse.data.items[0].statistics;
+        const videoInfo = serpApiResponse.data.video_results[0] || {};
 
         // Create prompt for Gemini
         const prompt = `Analyze this YouTube video based on its metadata:
 
 VIDEO DETAILS:
 Title: ${videoInfo.title || 'Unknown Title'}
-Channel: ${videoInfo.channelTitle || 'Unknown Channel'}
-Views: ${statistics.viewCount || 'Unknown Views'}
+Channel: ${videoInfo.channel?.name || 'Unknown Channel'}
+Views: ${videoInfo.views || 'Unknown Views'}
 Description: ${videoInfo.description || 'No description available'}
+Duration: ${videoInfo.duration_text || 'Unknown Duration'}
 
 Please provide a structured summary:
 
@@ -228,9 +221,9 @@ TAKEAWAYS:
 
         console.log('Sending prompt to Gemini');
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const summary = response.text();
+        const geminiResult = await model.generateContent(prompt);
+        const geminiResponse = await geminiResult.response;
+        const summary = geminiResponse.text();
 
         console.log('Summary generated successfully');
         res.status(200).json({ summary });
@@ -240,8 +233,8 @@ TAKEAWAYS:
             message: error.message,
             stack: error.stack,
             name: error.name,
-            apiKey: process.env.RAPID_API_KEY ? 'Present' : 'Missing',
-            apiKeyLength: process.env.RAPID_API_KEY ? process.env.RAPID_API_KEY.length : 0
+            apiKey: process.env.SERP_API_KEY ? 'Present' : 'Missing',
+            apiKeyLength: process.env.SERP_API_KEY ? process.env.SERP_API_KEY.length : 0
         });
         
         res.status(500).json({ 
