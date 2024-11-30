@@ -23,20 +23,17 @@ console.log('YOUTUBE_API_KEY length:', process.env.YOUTUBE_API_KEY ? process.env
 console.log('First 6 chars of YouTube key:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none');
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
 
-// Initialize YouTube client with explicit error checking
-let youtube;
-try {
-    if (!process.env.YOUTUBE_API_KEY) {
-        throw new Error('YouTube API key is not set in environment variables');
-    }
-    youtube = google.youtube({
-        version: 'v3',
-        auth: process.env.YOUTUBE_API_KEY
-    });
-    console.log('YouTube client initialized successfully');
-} catch (error) {
-    console.error('Error initializing YouTube client:', error.message);
-}
+// Add detailed logging for API key
+console.log('YouTube API Key Check:');
+console.log('Key exists:', !!process.env.YOUTUBE_API_KEY);
+console.log('Key length:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0);
+console.log('Key starts with:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none');
+
+// Initialize YouTube client differently
+const youtube = google.youtube({
+    version: 'v3',
+    auth: process.env.YOUTUBE_API_KEY
+});
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -155,24 +152,18 @@ app.post('/api/summarize', async (req, res) => {
     try {
         const { videoUrl, username } = req.body;
         console.log('Summary request from:', username, 'URL:', videoUrl);
-        console.log('Checking API keys:');
-        console.log('- YOUTUBE_API_KEY:', process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing');
-        console.log('- GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
 
+        if (!videoUrl) {
+            return res.status(400).json({ error: 'Video URL is required' });
+        }
+
+        // Verify API key again at request time
         if (!process.env.YOUTUBE_API_KEY) {
-            console.error('YOUTUBE_API_KEY is missing in environment');
-            return res.status(500).json({ 
-                error: 'YouTube API configuration error',
-                details: 'API key not found in environment variables'
-            });
+            console.error('YouTube API key missing at request time');
+            return res.status(500).json({ error: 'YouTube API configuration error' });
         }
 
-        if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY is not set');
-            return res.status(500).json({ error: 'Gemini API configuration error' });
-        }
-
-        // Extract video ID
+        // Extract video ID with logging
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -181,19 +172,20 @@ app.post('/api/summarize', async (req, res) => {
             } else if (url.hostname.includes('youtu.be')) {
                 videoId = url.pathname.slice(1);
             }
-            
-            if (!videoId) {
-                throw new Error('Could not extract video ID');
-            }
-            console.log('Processing video ID:', videoId);
+            console.log('Extracted video ID:', videoId);
         } catch (error) {
             console.error('URL parsing error:', error);
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Fetch video details
-        console.log('Fetching video data with API key:', process.env.YOUTUBE_API_KEY.substring(0, 5) + '...');
+        // Log the actual API call details
+        console.log('Making YouTube API request with:');
+        console.log('- Video ID:', videoId);
+        console.log('- API Key present:', !!process.env.YOUTUBE_API_KEY);
+
+        // Make the API call with explicit key
         const videoData = await youtube.videos.list({
+            key: process.env.YOUTUBE_API_KEY,  // Explicitly include the key here
             part: ['snippet', 'statistics', 'contentDetails'],
             id: [videoId]
         });
@@ -258,9 +250,10 @@ DETAILED SUMMARY:
             message: error.message,
             stack: error.stack,
             name: error.name,
-            environmentCheck: {
-                youtubeKey: process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing',
-                geminiKey: process.env.GEMINI_API_KEY ? 'Present' : 'Missing'
+            apiKeyCheck: {
+                exists: !!process.env.YOUTUBE_API_KEY,
+                length: process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0,
+                startsWith: process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none'
             }
         });
         
