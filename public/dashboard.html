@@ -612,6 +612,34 @@
             color: white;
             margin-top: 8px;
         }
+
+        .summarizer-container {
+            margin: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #videoUrl {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .summary-content {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            white-space: pre-wrap;
+            min-height: 100px;
+        }
     </style>
 </head>
 <body>
@@ -675,6 +703,16 @@
                 <button onclick="sendChatMessage()">Send</button>
             </div>
         </div>
+    </div>
+
+    <!-- Video Summarizer Section -->
+    <div class="summarizer-container">
+        <h3>YouTube Video Summarizer</h3>
+        <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="Enter YouTube URL">
+            <button onclick="summarizeYouTubeVideo()">Summarize</button>
+        </div>
+        <div id="summary" class="summary-content"></div>
     </div>
 
     <script>
@@ -1043,36 +1081,48 @@
             }
         });
 
-        async function summarizeYouTubeVideo() {
-            const videoUrl = document.getElementById('videoUrl').value.trim();
+        async function summarizeYouTubeVideo(event) {
+            event.preventDefault();
+            
+            const videoUrl = document.getElementById('youtubeUrl').value;
+            const summaryStatus = document.getElementById('summaryStatus');
             
             if (!videoUrl) {
-                alert('Please enter a YouTube URL');
+                summaryStatus.textContent = 'Please enter a YouTube URL';
+                summaryStatus.className = 'summary-status error';
                 return;
             }
-            
+
             try {
-                const response = await fetch('/api/summarize', {
+                summaryStatus.textContent = 'Generating summary...';
+                summaryStatus.className = 'summary-status loading';
+
+                const response = await fetch('/api/summarize', {  // Changed to use your local server
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('username')}`
                     },
-                    body: JSON.stringify({
+                    body: JSON.stringify({ 
                         videoUrl,
                         username: localStorage.getItem('username')
                     })
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    throw new Error(`Server responded with ${response.status}`);
+                    throw new Error(data.error || 'Failed to summarize video');
                 }
 
-                const data = await response.json();
-                document.getElementById('summary').textContent = data.summary;
+                document.getElementById('noteContent').value = data.summary;
+                summaryStatus.textContent = 'Summary generated successfully!';
+                summaryStatus.className = 'summary-status success';
 
             } catch (error) {
                 console.error('Summary error:', error);
-                document.getElementById('summary').textContent = 'Error generating summary. Please try again.';
+                summaryStatus.textContent = 'Failed to generate summary. Please try again.';
+                summaryStatus.className = 'summary-status error';
             }
         }
 
