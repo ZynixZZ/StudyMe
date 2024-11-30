@@ -28,31 +28,37 @@
         #messages {
             height: 400px;
             overflow-y: auto;
-            margin-bottom: 20px;
             padding: 10px;
-            border: 1px solid #333;
-            border-radius: 5px;
-            background: rgba(30, 30, 30, 0.9);
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 4px;
+            margin-bottom: 20px;
         }
 
         .message {
-            margin: 10px 0;
-            padding: 12px;
+            margin: 10px;
+            padding: 10px;
             border-radius: 8px;
+            max-width: 80%;
             word-wrap: break-word;
-            font-size: 15px;
-            line-height: 1.5;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        .message.user {
-            background: rgba(40, 40, 40, 0.9);
-            color: #fff;
+        .user-message {
+            background-color: #2c5282;
+            color: white;
+            margin-left: auto;
         }
 
-        .message.ai {
-            background: rgba(255, 255, 255, 0.9);
-            color: #000;
+        .ai-message {
+            background-color: white;
+            color: black;
+            margin-right: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .error-message {
+            background-color: #ff4444;
+            color: white;
+            margin-right: auto;
         }
 
         .input-container {
@@ -607,10 +613,13 @@
             const message = messageInput.value.trim();
             
             if (!message) return;
-
+            
             try {
-                displayMessage('You', message);
+                // Show user message
+                appendMessage('user', message);
+                messageInput.value = '';
 
+                // Get AI response
                 const response = await fetch('/api/ai-chat', {
                     method: 'POST',
                     headers: {
@@ -619,17 +628,32 @@
                     body: JSON.stringify({ message })
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(data.error || 'Failed to get AI response');
                 }
 
-                const data = await response.json();
-                displayMessage('AI', data.response);
-                messageInput.value = '';
+                // Show AI response
+                if (data.reply) {
+                    appendMessage('ai', data.reply);
+                } else {
+                    throw new Error('Empty response from server');
+                }
+
             } catch (error) {
                 console.error('Chat error:', error);
-                displayMessage('System', 'Error communicating with AI. Please try again.');
+                appendMessage('error', 'Sorry, I encountered an error. Please try again.');
             }
+        }
+
+        function appendMessage(type, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
         // Enter key to send
@@ -897,16 +921,20 @@
             }
         });
 
-        async function summarizeYouTubeVideo(url) {
-            const summaryStatus = document.getElementById('summaryStatus');
-            const noteContent = document.getElementById('noteContent');
+        async function summarizeYouTubeVideo(event) {
+            event.preventDefault();
             
-            try {
-                if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-                    throw new Error('Please enter a valid YouTube URL');
-                }
+            const videoUrl = document.getElementById('youtubeUrl').value;
+            const summaryStatus = document.getElementById('summaryStatus');
+            
+            if (!videoUrl) {
+                summaryStatus.textContent = 'Please enter a YouTube URL';
+                summaryStatus.className = 'summary-status error';
+                return;
+            }
 
-                summaryStatus.textContent = 'Analyzing video...';
+            try {
+                summaryStatus.textContent = 'Generating summary...';
                 summaryStatus.className = 'summary-status loading';
 
                 const response = await fetch('/api/summarize-video', {
@@ -914,46 +942,29 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ videoUrl })
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error + (data.details ? '\n\n' + data.details : ''));
+                    throw new Error(data.error || 'Failed to summarize video');
                 }
 
-                // Format the summary with video information
-                const formattedSummary = `
-Video Title: ${data.videoInfo.title}
-Duration: ${data.videoInfo.duration}
-Views: ${data.videoInfo.views.toLocaleString()}
-
-Summary:
-${data.summary}
-                `.trim();
-
-                noteContent.value = formattedSummary;
+                // Display the summary
+                document.getElementById('noteContent').value = data.summary;
                 summaryStatus.textContent = 'Summary generated successfully!';
                 summaryStatus.className = 'summary-status success';
 
             } catch (error) {
                 console.error('Summary error:', error);
-                summaryStatus.textContent = error.message;
+                summaryStatus.textContent = error.message || 'Failed to generate summary';
                 summaryStatus.className = 'summary-status error';
-                noteContent.value = '';
             }
         }
 
         // Add click handler for the summarize button
-        document.getElementById('summarizeBtn').addEventListener('click', async () => {
-            const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
-            if (!youtubeUrl) {
-                alert('Please enter a YouTube URL');
-                return;
-            }
-            await summarizeYouTubeVideo(youtubeUrl);
-        });
+        document.getElementById('summarizeBtn').addEventListener('click', summarizeYouTubeVideo);
     </script>
 </body>
 </html>
