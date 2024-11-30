@@ -6,7 +6,6 @@ const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
-const youtube = google.youtube('v3');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +16,12 @@ console.log('Starting server...');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Initialize YouTube client with API key
+const youtube = google.youtube({
+    version: 'v3',
+    auth: process.env.YOUTUBE_API_KEY
+});
 
 // Middleware
 app.use(express.json());
@@ -137,7 +142,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Verify environment variables
+        // Verify API keys
         if (!process.env.YOUTUBE_API_KEY) {
             console.error('YOUTUBE_API_KEY is not set');
             return res.status(500).json({ error: 'YouTube API configuration error' });
@@ -148,7 +153,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(500).json({ error: 'Gemini API configuration error' });
         }
 
-        // Extract video ID with better error handling
+        // Extract video ID
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -167,19 +172,12 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
-        // Fetch video details with error handling
-        let videoData;
-        try {
-            videoData = await youtube.videos.list({
-                key: process.env.YOUTUBE_API_KEY,
-                part: ['snippet', 'statistics', 'contentDetails'],
-                id: [videoId]
-            });
-            console.log('YouTube API response received');
-        } catch (error) {
-            console.error('YouTube API error:', error);
-            return res.status(500).json({ error: 'Failed to fetch video data from YouTube' });
-        }
+        // Fetch video details
+        console.log('Fetching video data with API key:', process.env.YOUTUBE_API_KEY.substring(0, 5) + '...');
+        const videoData = await youtube.videos.list({
+            part: ['snippet', 'statistics', 'contentDetails'],
+            id: [videoId]
+        });
 
         if (!videoData.data.items || videoData.data.items.length === 0) {
             return res.status(404).json({ error: 'Video not found or is private' });
@@ -240,7 +238,8 @@ DETAILED SUMMARY:
         console.error('Detailed summarizer error:', {
             message: error.message,
             stack: error.stack,
-            name: error.name
+            name: error.name,
+            youtubeKey: process.env.YOUTUBE_API_KEY ? 'Set' : 'Not Set'
         });
         
         res.status(500).json({ 
