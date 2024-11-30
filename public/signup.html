@@ -144,6 +144,9 @@
             <div class="input-group">
                 <input type="password" id="password" placeholder="Password" required>
             </div>
+            <div class="input-group">
+                <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            </div>
             <button type="submit">Sign Up</button>
             <div id="errorMessage" class="error-message"></div>
             <div id="successMessage" class="success-message"></div>
@@ -159,10 +162,17 @@
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             const errorMessage = document.getElementById('errorMessage');
             const successMessage = document.getElementById('successMessage');
 
             try {
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = 'Passwords do not match';
+                    successMessage.textContent = '';
+                    return;
+                }
+
                 const response = await fetch('/api/signup', {
                     method: 'POST',
                     headers: {
