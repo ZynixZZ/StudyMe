@@ -122,7 +122,7 @@
     <div class="signup-container">
         <h1>Create Account</h1>
         <div id="error-message"></div>
-        <form id="signupForm" onsubmit="signup(event)">
+        <form id="signupForm" onsubmit="handleSignup(event)">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
@@ -143,24 +143,8 @@
     </div>
 
     <script>
-        async function signup(event) {
+        async function handleSignup(event) {
             event.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const errorElement = document.getElementById('error-message');
-            
-            // Clear previous messages
-            errorElement.style.display = 'none';
-            errorElement.className = '';
-            
-            if (password !== confirmPassword) {
-                errorElement.textContent = 'Passwords do not match';
-                errorElement.style.display = 'block';
-                errorElement.className = 'error';
-                return;
-            }
             
             try {
                 const response = await fetch('/api/signup', {
@@ -168,28 +152,24 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: username.value,
+                        password: password.value
+                    })
                 });
 
-                const data = await response.json();
-                
                 if (!response.ok) {
-                    throw new Error(data.error || 'Signup failed');
+                    throw new Error('Signup failed');
                 }
 
-                // Show success message
-                errorElement.textContent = 'Signup successful! Redirecting...';
-                errorElement.style.display = 'block';
-                errorElement.className = 'success';
-
-                // Update redirect to explicitly use .html
+                const data = await response.json();
+                localStorage.setItem('username', data.username);
                 window.location.replace('/dashboard.html');
-                
+
             } catch (error) {
                 console.error('Signup error:', error);
-                errorElement.textContent = error.message;
+                errorElement.textContent = 'Signup failed. Please try again.';
                 errorElement.style.display = 'block';
-                errorElement.className = 'error';
             }
         }
     </script>

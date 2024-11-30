@@ -206,8 +206,10 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password }),
-                    credentials: 'include'
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
                 });
 
                 console.log('Response received:', response.status);
@@ -215,13 +217,13 @@
                 console.log('Response data:', data);
                 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Invalid username or password');
+                    throw new Error('Login failed');
                 }
 
                 // Store user data
                 console.log('Storing username:', username);
-                localStorage.setItem('username', username);
-                localStorage.setItem('chatUsername', username);
+                localStorage.setItem('username', data.username);
+                localStorage.setItem('chatUsername', data.username);
 
                 // Show success message
                 errorElement.textContent = 'Login successful! Redirecting...';
@@ -233,7 +235,7 @@
                 
             } catch (error) {
                 console.error('Login error:', error);
-                errorElement.textContent = error.message;
+                errorElement.textContent = 'Login failed. Please try again.';
                 errorElement.style.display = 'block';
                 errorElement.className = 'error';
             }
