@@ -42,18 +42,56 @@ app.get('/dashboard.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Make sure this is before your WebSocket setup
-app.use((req, res) => {
-    res.status(404).sendFile(path.join(__dirname, 'public', 'login.html'));
+// Add these endpoints after your existing middleware and before the static routes
+app.post('/api/signup', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        console.log('Signup attempt:', { username });
+
+        if (!username || !password) {
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
+        }
+
+        // For now, just return success
+        // In a real app, you'd want to store this in a database
+        res.status(200).json({ 
+            message: 'Signup successful',
+            username: username
+        });
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// Add more console logs for debugging
-app.use((req, res, next) => {
-    console.log(`${req.method} request to ${req.url}`);
-    next();
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        console.log('Login attempt:', { username });
+
+        if (!username || !password) {
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
+        }
+
+        // For now, just return success
+        // In a real app, you'd verify against a database
+        res.status(200).json({ 
+            message: 'Login successful',
+            username: username
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// AI endpoint
+// Make sure this endpoint is defined BEFORE your catch-all route
 app.post('/api/ai-server', async (req, res) => {
     try {
         const { message, username } = req.body;
@@ -87,7 +125,18 @@ app.post('/api/ai-server', async (req, res) => {
     }
 });
 
-// Add this with your other endpoints
+// Make sure this is AFTER all your API endpoints
+app.use((req, res) => {
+    res.status(404).sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Add more console logs for debugging
+app.use((req, res, next) => {
+    console.log(`${req.method} request to ${req.url}`);
+    next();
+});
+
+// AI endpoint
 app.post('/api/summarize', async (req, res) => {
     try {
         const { videoUrl, username } = req.body;
