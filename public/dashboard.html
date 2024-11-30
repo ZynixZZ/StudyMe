@@ -1043,48 +1043,36 @@
             }
         });
 
-        async function summarizeYouTubeVideo(event) {
-            event.preventDefault();
-            
-            const videoUrl = document.getElementById('youtubeUrl').value;
-            const summaryStatus = document.getElementById('summaryStatus');
+        async function summarizeYouTubeVideo() {
+            const videoUrl = document.getElementById('videoUrl').value.trim();
             
             if (!videoUrl) {
-                summaryStatus.textContent = 'Please enter a YouTube URL';
-                summaryStatus.className = 'summary-status error';
+                alert('Please enter a YouTube URL');
                 return;
             }
-
+            
             try {
-                summaryStatus.textContent = 'Generating summary...';
-                summaryStatus.className = 'summary-status loading';
-
-                const response = await fetch('/api/summarize', {  // Changed to use your local server
+                const response = await fetch('/api/summarize', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('username')}`
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         videoUrl,
                         username: localStorage.getItem('username')
                     })
                 });
 
-                const data = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to summarize video');
+                    throw new Error(`Server responded with ${response.status}`);
                 }
 
-                document.getElementById('noteContent').value = data.summary;
-                summaryStatus.textContent = 'Summary generated successfully!';
-                summaryStatus.className = 'summary-status success';
+                const data = await response.json();
+                document.getElementById('summary').textContent = data.summary;
 
             } catch (error) {
                 console.error('Summary error:', error);
-                summaryStatus.textContent = 'Failed to generate summary. Please try again.';
-                summaryStatus.className = 'summary-status error';
+                document.getElementById('summary').textContent = 'Error generating summary. Please try again.';
             }
         }
 
