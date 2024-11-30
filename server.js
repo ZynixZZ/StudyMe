@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const WebSocket = require('ws');
 const http = require('http');
+const crypto = require('crypto');
 
 // Initialize Express
 const app = express();
@@ -22,30 +23,67 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// This is a temporary in-memory store - in production you'd use a database
+const users = new Map();
+const sessions = new Map();
+
+// Helper function to create a session
+function createSession(username) {
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    sessions.set(sessionId, {
+        username,
+        timestamp: Date.now()
+    });
+    return sessionId;
+}
+
 // Signup endpoint
 app.post('/api/signup', async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        // Basic validation
+        console.log('Signup attempt:', { username });
+
         if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required' });
+            console.log('Missing credentials');
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
         }
 
-        // Here you would typically:
-        // 1. Check if username already exists
-        // 2. Hash the password
-        // 3. Save to database
+        // Check if user already exists
+        if (users.has(username)) {
+            return res.status(400).json({ 
+                error: 'Username already exists' 
+            });
+        }
+
+        // Store user (in production, you'd hash the password)
+        users.set(username, { 
+            password,
+            createdAt: Date.now()
+        });
+
+        // Create session
+        const sessionId = createSession(username);
+
+        console.log('Signup successful for:', username);
         
-        // For now, we'll just send a success response
-        res.json({ 
+        // Send session cookie and success response
+        res.cookie('sessionId', sessionId, { 
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production'
+        }).status(200).json({ 
             message: 'Signup successful',
             username: username
         });
 
     } catch (error) {
-        console.error('Signup error:', error);
-        res.status(500).json({ error: 'Failed to create account' });
+        console.error('Server signup error:', error);
+        res.status(500).json({ 
+            error: 'Failed to create account',
+            details: error.message 
+        });
     }
 });
 
@@ -53,25 +91,33 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        
-        // Basic validation
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required' });
+
+        // Check credentials
+        const user = users.get(username);
+        if (!user || user.password !== password) {
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
         }
 
-        // Here you would typically:
-        // 1. Check credentials against database
-        // 2. Create a session or token
-        
-        // For now, we'll just send a success response
-        res.json({ 
+        // Create session
+        const sessionId = createSession(username);
+
+        // Send session cookie and success response
+        res.cookie('sessionId', sessionId, { 
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production'
+        }).status(200).json({ 
             message: 'Login successful',
             username: username
         });
 
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Failed to log in' });
+        res.status(500).json({ 
+            error: 'Failed to log in',
+            details: error.message 
+        });
     }
 });
 
@@ -83,6 +129,37 @@ app.get('/signup', (req, res) => {
 // Add a route for the login page
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Add these routes after your existing routes
+// Make sure they're before any catch-all routes
+
+// Add middleware to check auth for dashboard
+function checkAuth(req, res, next) {
+    const sessionId = req.cookies?.sessionId;
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+        return res.redirect('/login');
+    }
+
+    req.username = session.username;
+    next();
+}
+
+// Dashboard route
+app.get('/dashboard', checkAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Root route - redirect to login
+app.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
+// Catch-all route for any unmatched routes
+app.get('*', (req, res) => {
+    res.redirect('/login');
 });
 
 // Initialize WebSocket with production settings
@@ -98,5 +175,40 @@ const wss = new WebSocket.Server({
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+});
+
+// Initialize the AI with your API key
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Update the AI chat endpoint
+app.post('/api/ai-chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        console.log('Attempting AI chat with message:', message);
+
+        // Use the hosted Gemini Pro model
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        
+        // Generate content
+        const result = await model.generateContent(message);
+        const response = await result.response;
+        const text = response.text();
+        
+        console.log('AI Response received:', text.substring(0, 100) + '...');
+        
+        res.json({ reply: text });
+        
+    } catch (error) {
+        console.error('AI Chat error:', error);
+        res.status(500).json({ 
+            error: 'Failed to get AI response',
+            details: error.message 
+        });
+    }
 });
 
