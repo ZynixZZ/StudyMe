@@ -125,18 +125,7 @@ app.post('/api/ai-server', async (req, res) => {
     }
 });
 
-// Make sure this is AFTER all your API endpoints
-app.use((req, res) => {
-    res.status(404).sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-// Add more console logs for debugging
-app.use((req, res, next) => {
-    console.log(`${req.method} request to ${req.url}`);
-    next();
-});
-
-// AI endpoint
+// Add this with your other endpoints, before the catch-all route
 app.post('/api/summarize', async (req, res) => {
     try {
         const { videoUrl, username } = req.body;
@@ -146,25 +135,25 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Ensure the API key is set
         if (!process.env.GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not set');
             return res.status(500).json({ error: 'AI service configuration error' });
         }
 
-        // Get Gemini model
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        
+        // Create a more specific prompt for video summarization
+        const prompt = `Please analyze this YouTube video: ${videoUrl} and provide:
+        1. Main topics covered
+        2. Key points and takeaways
+        3. Brief summary
+        Please be concise and focus on the most important information.`;
 
-        // Create prompt for summarization
-        const prompt = `Please provide a concise summary of this YouTube video: ${videoUrl}. 
-                       Focus on the main points and key takeaways.`;
-
-        // Generate summary from Gemini
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
 
-        console.log('Summary generated:', summary);
+        console.log('Summary generated for video:', videoUrl);
         res.status(200).json({ summary });
 
     } catch (error) {
@@ -172,6 +161,17 @@ app.post('/api/summarize', async (req, res) => {
         console.error('Stack trace:', error.stack);
         res.status(500).json({ error: 'Failed to generate summary' });
     }
+});
+
+// Make sure this is AFTER all your API endpoints
+app.use((req, res) => {
+    res.status(404).sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Add more console logs for debugging
+app.use((req, res, next) => {
+    console.log(`${req.method} request to ${req.url}`);
+    next();
 });
 
 // WebSocket setup
