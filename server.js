@@ -14,19 +14,29 @@ const PORT = process.env.PORT || 3000;
 // Add this console log to show server is initializing
 console.log('Starting server...');
 
-// Add this near the top of your file, after your requires
+// Add these console logs for debugging
 console.log('Environment variables check on startup:');
-console.log('YOUTUBE_API_KEY present:', !!process.env.YOUTUBE_API_KEY);
-console.log('GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY);
+console.log('YOUTUBE_API_KEY:', process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing');
+console.log('YOUTUBE_API_KEY length:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0);
+console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
+
+// Initialize YouTube client with explicit error checking
+let youtube;
+try {
+    if (!process.env.YOUTUBE_API_KEY) {
+        throw new Error('YouTube API key is not set in environment variables');
+    }
+    youtube = google.youtube({
+        version: 'v3',
+        auth: process.env.YOUTUBE_API_KEY
+    });
+    console.log('YouTube client initialized successfully');
+} catch (error) {
+    console.error('Error initializing YouTube client:', error.message);
+}
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Initialize YouTube client with API key
-const youtube = google.youtube({
-    version: 'v3',
-    auth: process.env.YOUTUBE_API_KEY || console.error('YouTube API key not found!')
-});
 
 // Middleware
 app.use(express.json());
