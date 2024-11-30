@@ -15,9 +15,12 @@ const PORT = process.env.PORT || 3000;
 console.log('Starting server...');
 
 // Add these console logs for debugging
-console.log('Environment variables check on startup:');
+console.log('Complete environment variables check:');
+console.log('All env variables:', Object.keys(process.env));
+console.log('TEST_KEY:', process.env.TEST_KEY);
 console.log('YOUTUBE_API_KEY:', process.env.YOUTUBE_API_KEY ? 'Present' : 'Missing');
 console.log('YOUTUBE_API_KEY length:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.length : 0);
+console.log('First 6 chars of YouTube key:', process.env.YOUTUBE_API_KEY ? process.env.YOUTUBE_API_KEY.substring(0, 6) : 'none');
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
 
 // Initialize YouTube client with explicit error checking
