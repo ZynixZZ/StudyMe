@@ -20,6 +20,33 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(express.json());
 app.use(express.static('public'));
 
+// Root route - serve login page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Add explicit routes for each page
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/signup.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'signup.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Make sure this is before your WebSocket setup
+app.use((req, res) => {
+    res.status(404).sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // Add more console logs for debugging
 app.use((req, res, next) => {
     console.log(`${req.method} request to ${req.url}`);
