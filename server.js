@@ -5,6 +5,8 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { google } = require('googleapis');
+const youtube = google.youtube('v3');
 
 const app = express();
 const server = http.createServer(app);
@@ -135,7 +137,7 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Video URL is required' });
         }
 
-        // Extract video ID and validate URL
+        // Extract video ID
         let videoId;
         try {
             const url = new URL(videoUrl);
@@ -154,6 +156,28 @@ app.post('/api/summarize', async (req, res) => {
             return res.status(400).json({ error: 'Invalid YouTube URL format' });
         }
 
+        // Fetch video details from YouTube API
+        const videoData = await youtube.videos.list({
+            key: process.env.YOUTUBE_API_KEY,
+            part: ['snippet', 'statistics', 'contentDetails'],
+            id: [videoId]
+        });
+
+        if (!videoData.data.items || videoData.data.items.length === 0) {
+            return res.status(404).json({ error: 'Video not found' });
+        }
+
+        const video = videoData.data.items[0];
+        const videoInfo = {
+            title: video.snippet.title,
+            description: video.snippet.description,
+            publishedAt: video.snippet.publishedAt,
+            channelTitle: video.snippet.channelTitle,
+            tags: video.snippet.tags || [],
+            viewCount: video.statistics.viewCount,
+            duration: video.contentDetails.duration
+        };
+
         if (!process.env.GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not set');
             return res.status(500).json({ error: 'AI service configuration error' });
@@ -161,45 +185,43 @@ app.post('/api/summarize', async (req, res) => {
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        // Create a more specific prompt that forces focus on the given video
-        const prompt = `Task: Analyze ONLY this specific YouTube video: ${videoUrl} (ID: ${videoId})
+        const prompt = `Analyze this specific YouTube video based on its official metadata:
 
-IMPORTANT INSTRUCTIONS:
-1. Focus EXCLUSIVELY on the video with ID ${videoId}
-2. Do NOT provide generic information
-3. Do NOT analyze any other videos
-4. If you cannot access the specific video, please state that clearly
+VIDEO DETAILS:
+Title: ${videoInfo.title}
+Channel: ${videoInfo.channelTitle}
+Published: ${videoInfo.publishedAt}
+Duration: ${videoInfo.duration}
+Views: ${videoInfo.viewCount}
+Tags: ${videoInfo.tags.join(', ')}
 
-Please provide a structured analysis in this format:
+Description:
+${videoInfo.description}
 
-VIDEO ID BEING ANALYZED: ${videoId}
+Please provide a structured summary of THIS SPECIFIC video using the above information:
 
-VERIFICATION:
-• Confirm this is the video URL being analyzed: ${videoUrl}
-• Video ID confirmed: ${videoId}
+TITLE: ${videoInfo.title}
 
 MAIN TOPICS:
-• [List 3-4 main topics from this specific video]
+• [Extract 3-4 main topics from the video's description and tags]
 
 KEY POINTS:
-• [List 3-5 key points made in this exact video]
+• [List 3-5 key points based on the video's description]
 
 DETAILED SUMMARY:
-[Provide 2-3 paragraphs specifically about this video's content]
+[2-3 paragraphs summarizing the video's content based on its description]
 
-IMPORTANT NOTE: If you cannot access or analyze this specific video, please respond with "Unable to access video content" instead of providing generic information.
+CONTEXT:
+• Channel: ${videoInfo.channelTitle}
+• Published: ${videoInfo.publishedAt}
+• Views: ${videoInfo.viewCount}
 
-Remember: Only analyze video ${videoId} and no other content.`;
+Use ONLY the information provided above about this specific video.`;
 
         console.log('Sending prompt to Gemini for video:', videoId);
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
-
-        // Verify the summary mentions the correct video ID
-        if (!summary.includes(videoId)) {
-            console.warn('Summary may not be specific to requested video');
-        }
 
         console.log('Summary generated for video:', videoId);
         res.status(200).json({ summary });
