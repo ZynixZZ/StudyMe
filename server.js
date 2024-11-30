@@ -65,6 +65,33 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// Add this near your other API endpoints
+app.post('/api/ai-server', async (req, res) => {
+    try {
+        const { message, username } = req.body;
+        console.log('AI request from:', username, 'Message:', message);
+
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        // Here you would typically:
+        // 1. Call your AI service
+        // 2. Process the response
+        // For now, let's send a simple response
+        const reply = `AI Response: I received your message: "${message}"`;
+
+        res.status(200).json({ 
+            reply: reply,
+            username: username
+        });
+
+    } catch (error) {
+        console.error('AI server error:', error);
+        res.status(500).json({ error: 'Failed to get AI response' });
+    }
+});
+
 // Serve static files from 'public' directory
 app.use(express.static('public'));
 
