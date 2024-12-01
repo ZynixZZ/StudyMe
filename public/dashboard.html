@@ -612,6 +612,25 @@
             color: white;
             margin-top: 8px;
         }
+
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .logout-btn:hover {
+            background: #ff6666;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -676,6 +695,8 @@
             </div>
         </div>
     </div>
+
+    <button id="logoutBtn" class="logout-btn">Logout</button>
 
     <script>
         let username = localStorage.getItem('username');
@@ -1143,6 +1164,13 @@
             if (chatUsername) {
                 chatUsername.textContent = username;
             }
+
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                // Clear stored username
+                localStorage.removeItem('username');
+                // Redirect to login page
+                window.location.href = '/login.html';
+            });
         });
     </script>
 </body>
