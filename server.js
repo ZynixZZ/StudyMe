@@ -273,25 +273,30 @@ wss.on('connection', (ws) => {
                 console.log(`${data.username} connected`);
                 
                 // Broadcast user joined message
+                const systemMessage = JSON.stringify({
+                    type: 'system',
+                    username: 'System',
+                    message: `${data.username} joined the chat`
+                });
+                
+                // Send to all clients except the sender
                 wss.clients.forEach((client) => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({
-                            type: 'system',
-                            username: 'System',
-                            message: `${data.username} joined the chat`
-                        }));
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        client.send(systemMessage);
                     }
                 });
             } else if (data.type === 'chat') {
                 console.log('Broadcasting chat message:', data);
-                // Broadcast the message to all clients
+                const chatMessage = JSON.stringify({
+                    type: 'chat',
+                    username: clients.get(ws),
+                    message: data.message
+                });
+                
+                // Send to all clients including the sender (they'll receive it only once)
                 wss.clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({
-                            type: 'chat',
-                            username: clients.get(ws),
-                            message: data.message
-                        }));
+                        client.send(chatMessage);
                     }
                 });
             }
