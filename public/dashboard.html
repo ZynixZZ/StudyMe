@@ -653,6 +653,30 @@
             background: #3182ce;
             transform: translateY(-1px);
         }
+
+        .status-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+            transition: background-color 0.3s ease;
+        }
+
+        .ai-status-dot.connected {
+            background: #44ff44;
+            box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+        }
+
+        .ai-status-dot.error {
+            background: #ff4444;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -692,8 +716,14 @@
     </div>
     <div class="chat-container">
         <div class="connection-status">
-            <span class="status-dot"></span>
-            <span id="connectionStatus">Connecting to AI...</span>
+            <div class="status-group">
+                <span class="status-dot"></span>
+                <span id="connectionStatus">.</span>
+            </div>
+            <div class="status-group">
+                <span class="ai-status-dot"></span>
+                <span id="aiConnectionStatus"></span>
+            </div>
             <div class="button-group">
                 <button id="flashcardBtn" class="flashcard-btn">Flashcards</button>
                 <button id="studyNoteBtn" class="study-note-btn">Study Note</button>
@@ -1203,6 +1233,43 @@
             document.getElementById('flashcardBtn').addEventListener('click', () => {
                 window.location.href = 'flashcards.html';
             });
+
+            async function checkAIConnection() {
+                const statusDot = document.querySelector('.ai-status-dot');
+                const statusText = document.getElementById('aiConnectionStatus');
+                
+                try {
+                    const response = await fetch('/api/ai-server', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: 'test connection',
+                            username: localStorage.getItem('username')
+                        })
+                    });
+
+                    if (response.ok) {
+                        statusDot.classList.add('connected');
+                        statusDot.classList.remove('error');
+                        statusText.textContent = 'AI: Connected';
+                    } else {
+                        throw new Error('AI connection failed');
+                    }
+                } catch (error) {
+                    statusDot.classList.remove('connected');
+                    statusDot.classList.add('error');
+                    statusText.textContent = 'AI: Disconnected';
+                    console.error('AI Connection Error:', error);
+                }
+            }
+
+            // Add this to your existing DOMContentLoaded event
+            checkAIConnection();
+            
+            // Check AI connection periodically
+            setInterval(checkAIConnection, 30000); // Check every 30 seconds
         });
     </script>
 </body>
