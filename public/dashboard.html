@@ -773,9 +773,6 @@
             window.sendChatMessage = function() {
                 const message = chatInput.value.trim();
                 if (message && socket.readyState === WebSocket.OPEN) {
-                    // Display message immediately for sender
-                    displayChatMessage(username, message);
-                    
                     // Send to server
                     socket.send(JSON.stringify({
                         type: 'chat',
