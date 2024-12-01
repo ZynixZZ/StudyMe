@@ -1123,9 +1123,12 @@
             console.log('Logged in as:', username);
 
             // Initialize chat widget toggle
-            const minimizeBtn = document.getElementById('minimizeChat');
             const chatContent = document.getElementById('chatContent');
-            
+            // Start with chat closed
+            chatContent.style.display = 'none';
+            const minimizeBtn = document.getElementById('minimizeChat');
+            minimizeBtn.textContent = '+';
+
             function toggleChat() {
                 console.log('Toggle chat clicked');
                 if (chatContent.style.display === 'none' || !chatContent.style.display) {
