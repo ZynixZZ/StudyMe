@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #444;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #888;
+        }
+
+        .question-container {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .question {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option {
+            padding: 10px 15px;
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option:hover {
+            background: #3a3a3a;
+        }
+
+        .option.selected {
+            background: #2c5282;
+            border-color: #3182ce;
+        }
+
+        .submit-btn {
+            padding: 12px 24px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #3182ce;
+        }
+
+        .results {
+            display: none;
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .score {
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #3182ce;
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Test</h1>
+            <button class="back-btn" onclick="confirmExit()">Exit Test</button>
+        </div>
+
+        <div id="loading" class="loading">
+            Generating test questions...
+        </div>
+
+        <div id="testContent" style="display: none;">
+            <!-- Questions will be inserted here -->
+        </div>
+
+        <div id="results" class="results">
+            <!-- Results will be shown here -->
+        </div>
+    </div>
+
+    <script>
+        let testQuestions = [];
+        let userAnswers = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.replace('/login.html');
+                return;
+            }
+            generateTest();
+        });
+
+        async function generateTest() {
+            const noteIndex = localStorage.getItem('selectedNoteIndex');
+            const questionCount = localStorage.getItem('testQuestionCount');
+            const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            const selectedNote = savedNotes[noteIndex];
+
+            if (!selectedNote) {
+                alert('Error loading note');
+                window.location.href = 'test.html';
+                return;
+            }
+
+            try {
+                const prompt = `
+                    Generate a multiple choice test based on this content.
+                    Create exactly ${questionCount} questions.
+                    For each question, provide:
+                    1. A clear question
+                    2. Four possible answers (A, B, C, D)
+                    3. The correct answer letter
+                    4. A brief explanation of the correct answer
+
+                    Format as JSON array:
+                    [
+                        {
+                            "question": "question text",
+                            "options": {
+                                "A": "option A text",
+                                "B": "option B text",
+                                "C": "option C text",
+                                "D": "option D text"
+                            },
+                            "correct": "A",
+                            "explanation": "explanation text"
+                        }
+                    ]
+
+                    Content to test on:
+                    ${selectedNote.content}
+                `;
+
+                const response = await fetch('/api/ai-server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: prompt,
+                        username: localStorage.getItem('username')
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate test');
+
+                const data = await response.json();
+                testQuestions = JSON.parse(data.reply.replace(/```json|```/g, '').trim());
+                displayTest();
+
+            } catch (error) {
+                console.error('Error generating test:', error);
+                document.getElementById('loading').innerHTML = 
+                    'Error generating test. Please try again.';
+            }
+        }
+
+        function displayTest() {
+            const testContent = document.getElementById('testContent');
+            document.getElementById('loading').style.display = 'none';
+            testContent.style.display = 'block';
+
+            testContent.innerHTML = testQuestions.map((q, index) => `
+                <div class="question-container">
+                    <div class="question">${index + 1}. ${q.question}</div>
+                    <div class="options">
+                        ${Object.entries(q.options).map(([letter, text]) => `
+                            <div class="option" 
+                                 onclick="selectAnswer(${index}, '${letter}')"
+                                 id="q${index}${letter}">
+                                ${letter}) ${text}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('') + '<button class="submit-btn" onclick="submitTest()">Submit Test</button>';
+        }
+
+        function selectAnswer(questionIndex, letter) {
+            // Remove previous selection
+            document.querySelectorAll(`[id^="q${questionIndex}"]`)
+                .forEach(el => el.classList.remove('selected'));
+            
+            // Add new selection
+            document.getElementById(`q${questionIndex}${letter}`).classList.add('selected');
+            userAnswers[questionIndex] = letter;
+        }
+
+        function submitTest() {
+            if (Object.keys(userAnswers).length < testQuestions.length) {
+                alert('Please answer all questions before submitting.');
+                return;
+            }
+
+            const results = testQuestions.map((q, index) => ({
+                question: q.question,
+                userAnswer: userAnswers[index],
+                correctAnswer: q.correct,
+                explanation: q.explanation,
+                isCorrect: userAnswers[index] === q.correct
+            }));
+
+            const score = Math.round(
+                (results.filter(r => r.isCorrect).length / results.length) * 100
+            );
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="score">Score: ${score}%</div>
+                ${results.map((r, i) => `
+                    <div class="question-container">
+                        <div class="question">${i + 1}. ${r.question}</div>
+                        <div style="color: ${r.isCorrect ? '#4CAF50' : '#f44336'}">
+                            Your answer: ${r.userAnswer}) ${testQuestions[i].options[r.userAnswer]}
+                        </div>
+                        ${!r.isCorrect ? `
+                            <div style="color: #4CAF50; margin-top: 10px">
+                                Correct answer: ${r.correctAnswer}) ${testQuestions[i].options[r.correctAnswer]}
+                            </div>
+                        ` : ''}
+                        <div style="margin-top: 10px; color: #888">
+                            ${r.explanation}
+                        </div>
+                    </div>
+                `).join('')}
+                <button class="back-btn" style="margin-top: 20px" 
+                        onclick="window.location.href='test.html'">
+                    Back to Tests
+                </button>
+            `;
+            resultsDiv.style.display = 'block';
+            document.getElementById('testContent').style.display = 'none';
+        }
+
+        function confirmExit() {
+            if (confirm('Are you sure you want to exit? Your progress will be lost.')) {
+                window.location.href = 'test.html';
+            }
+        }
+    </script>
+</body>
+</html> 

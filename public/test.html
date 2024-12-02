@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #444;
+            transform: translateY(-1px);
+        }
+
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .note-card {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .note-card:hover {
+            transform: translateY(-2px);
+            background: #333;
+        }
+
+        .note-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .note-date {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .note-preview {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .test-options {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .question-count {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="number"] {
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            width: 80px;
+        }
+
+        .start-test-btn {
+            padding: 10px 20px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-test-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Create Test</h1>
+            <button class="back-btn" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+        </div>
+
+        <div class="test-options" id="testOptions">
+            <div class="question-count">
+                <label for="questionCount">Number of Questions:</label>
+                <input type="number" id="questionCount" min="1" max="20" value="10">
+            </div>
+            <button class="start-test-btn" onclick="startTest()">Start Test</button>
+        </div>
+
+        <div class="notes-grid" id="notesGrid">
+            <!-- Notes will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if user is logged in
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.replace('/login.html');
+                return;
+            }
+
+            loadNotes();
+        });
+
+        function loadNotes() {
+            const notesGrid = document.getElementById('notesGrid');
+            let savedNotes = [];
+
+            try {
+                savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            } catch (e) {
+                console.error('Error loading notes:', e);
+            }
+
+            if (savedNotes.length === 0) {
+                notesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No saved notes found</p>';
+                return;
+            }
+
+            notesGrid.innerHTML = savedNotes.map((note, index) => `
+                <div class="note-card" onclick="selectNote(${index})">
+                    <div class="note-title">${note.title || 'Untitled Note'}</div>
+                    <div class="note-date">${new Date(note.timestamp).toLocaleDateString()}</div>
+                    <div class="note-preview">${note.content ? note.content.substring(0, 100) + '...' : 'No content'}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectNote(index) {
+            localStorage.setItem('selectedNoteIndex', index);
+            document.getElementById('testOptions').style.display = 'block';
+        }
+
+        function startTest() {
+            const questionCount = document.getElementById('questionCount').value;
+            localStorage.setItem('testQuestionCount', questionCount);
+            window.location.href = 'take-test.html';
+        }
+    </script>
+</body>
+</html> 
