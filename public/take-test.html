@@ -166,10 +166,10 @@
 
         async function generateTest() {
             const noteIndex = localStorage.getItem('selectedNoteIndex');
-            const questionCount = localStorage.getItem('testQuestionCount');
+            const questionCount = parseInt(localStorage.getItem('testQuestionCount'));
             const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
             const selectedNote = savedNotes[noteIndex];
-
+            
             if (!selectedNote) {
                 alert('Error loading note');
                 window.location.href = 'test.html';
@@ -177,55 +177,98 @@
             }
 
             try {
-                const prompt = `
-                    Generate a multiple choice test based on this content.
-                    Create exactly ${questionCount} questions.
-                    For each question, provide:
-                    1. A clear question
-                    2. Four possible answers (A, B, C, D)
-                    3. The correct answer letter
-                    4. A brief explanation of the correct answer
+                // Break up into chunks of 10 questions max
+                const CHUNK_SIZE = 10;
+                const chunks = Math.ceil(questionCount / CHUNK_SIZE);
+                let allQuestions = [];
 
-                    Format as JSON array:
-                    [
-                        {
-                            "question": "question text",
-                            "options": {
-                                "A": "option A text",
-                                "B": "option B text",
-                                "C": "option C text",
-                                "D": "option D text"
-                            },
-                            "correct": "A",
-                            "explanation": "explanation text"
+                for (let i = 0; i < chunks; i++) {
+                    const remainingQuestions = questionCount - (i * CHUNK_SIZE);
+                    const currentChunkSize = Math.min(CHUNK_SIZE, remainingQuestions);
+                    
+                    document.getElementById('loading').innerHTML = 
+                        `Generating questions... (${allQuestions.length}/${questionCount})`;
+
+                    const prompt = `
+                        Generate ${currentChunkSize} multiple choice test questions.
+                        Keep all answers and explanations very brief and concise.
+                        
+                        For each question include:
+                        - Short question
+                        - Four brief answer options (A, B, C, D)
+                        - Correct answer letter
+                        - One-sentence explanation
+
+                        Format as JSON array like this:
+                        [{"question": "...", "options": {"A": "...", "B": "...", "C": "...", "D": "..."}, "correct": "A", "explanation": "..."}]
+
+                        Content to test on:
+                        ${selectedNote.content}
+                    `;
+
+                    const response = await fetch('/api/ai-server', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: prompt,
+                            username: localStorage.getItem('username')
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to generate test');
+
+                    const data = await response.json();
+                    
+                    try {
+                        const cleanedResponse = data.reply
+                            .replace(/```json|```/g, '')
+                            .trim()
+                            .replace(/[\u201C\u201D]/g, '"')
+                            .replace(/[\r\n\t]/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .replace(/,\s*]/g, ']')
+                            .replace(/,\s*}/g, '}');
+
+                        const jsonMatch = cleanedResponse.match(/\[.*\]/);
+                        const chunkQuestions = JSON.parse(jsonMatch ? jsonMatch[0] : cleanedResponse);
+
+                        if (!Array.isArray(chunkQuestions)) {
+                            throw new Error('Invalid response format');
                         }
-                    ]
 
-                    Content to test on:
-                    ${selectedNote.content}
-                `;
+                        const validQuestions = chunkQuestions.filter(q => 
+                            q && q.question && 
+                            q.options && 
+                            q.correct && 
+                            q.explanation &&
+                            Object.keys(q.options).length === 4
+                        );
 
-                const response = await fetch('/api/ai-server', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: prompt,
-                        username: localStorage.getItem('username')
-                    })
-                });
+                        allQuestions = [...allQuestions, ...validQuestions];
 
-                if (!response.ok) throw new Error('Failed to generate test');
+                    } catch (parseError) {
+                        console.error('Chunk parsing error:', parseError);
+                        continue; // Skip this chunk and try the next one
+                    }
+                }
 
-                const data = await response.json();
-                testQuestions = JSON.parse(data.reply.replace(/```json|```/g, '').trim());
+                if (allQuestions.length === 0) {
+                    throw new Error('No valid questions could be generated');
+                }
+
+                testQuestions = allQuestions.slice(0, questionCount);
                 displayTest();
 
             } catch (error) {
                 console.error('Error generating test:', error);
-                document.getElementById('loading').innerHTML = 
-                    'Error generating test. Please try again.';
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #ff4444; padding: 20px;">
+                        Error: ${error.message || 'Failed to generate test'}.<br>
+                        Please try again with fewer questions or refresh the page.
+                    </div>
+                `;
             }
         }
 

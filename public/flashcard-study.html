@@ -166,6 +166,7 @@
             try {
                 const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
                 const selectedNote = savedNotes[noteIndex];
+                const cardCount = localStorage.getItem('flashcardCount') || 5; // Get user-selected count
                 
                 if (!selectedNote) {
                     alert('Note not found');
@@ -177,9 +178,9 @@
                 document.querySelector('.flashcard-front').innerHTML = 
                     '<div style="color: #888;">Generating flashcards...</div>';
 
-                // Create AI prompt
+                // Create AI prompt with dynamic card count
                 const prompt = `
-                    Create 5 study flashcards from this note content. 
+                    Create ${cardCount} study flashcards from this note content. 
                     Format each flashcard as JSON with "question" and "answer" fields.
                     Make the questions test understanding of key concepts.
                     Keep answers clear and concise.
