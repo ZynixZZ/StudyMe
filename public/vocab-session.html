@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Session</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #444;
+            transform: translateY(-1px);
+        }
+
+        .vocab-container {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .vocab-question {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #333;
+            border-radius: 8px;
+        }
+
+        .sentence {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .word-input {
+            padding: 8px 12px;
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 4px;
+            color: white;
+            font-size: 1em;
+            width: 200px;
+            margin: 0 5px;
+        }
+
+        .word-input.correct {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .word-input.incorrect {
+            border-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .hint {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .submit-btn {
+            padding: 12px 24px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .progress {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #888;
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Vocabulary Practice</h1>
+            <button class="back-btn" onclick="confirmExit()">Exit Session</button>
+        </div>
+
+        <div class="progress">
+            Question <span id="currentQuestion">1</span> of <span id="totalQuestions">0</span>
+        </div>
+
+        <div id="vocabContent" class="vocab-container">
+            <div id="loading">Generating vocabulary questions...</div>
+        </div>
+    </div>
+
+    <script>
+        let vocabQuestions = [];
+        let currentIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.replace('/login.html');
+                return;
+            }
+            generateVocabQuestions();
+        });
+
+        async function generateVocabQuestions() {
+            const noteIndex = localStorage.getItem('selectedNoteIndex');
+            const vocabCount = localStorage.getItem('vocabCount');
+            const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            const selectedNote = savedNotes[noteIndex];
+
+            if (!selectedNote) {
+                alert('Error loading note');
+                window.location.href = 'vocab.html';
+                return;
+            }
+
+            try {
+                const prompt = `
+                    Generate ${vocabCount} fill-in-the-blank sentences using vocabulary from this content.
+                    For each sentence:
+                    1. Choose an important term or concept
+                    2. Create a sentence using that term
+                    3. Provide a hint about the missing word
+                    
+                    Return ONLY a JSON array in this format:
+                    [{"sentence": "The ___ is a concept.", "word": "term", "hint": "clue about the word"}]
+
+                    Content to use:
+                    ${selectedNote.content}
+                `;
+
+                const response = await fetch('/api/ai-server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: prompt,
+                        username: localStorage.getItem('username')
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate questions');
+
+                const data = await response.json();
+                
+                // Add debug logging
+                console.log('Raw AI response:', data.reply);
+                
+                // Clean and parse the response
+                const cleanedResponse = data.reply
+                    .replace(/```json|```/g, '')  // Remove code blocks
+                    .trim()                       // Remove whitespace
+                    .replace(/[\u201C\u201D]/g, '"')  // Replace smart quotes
+                    .replace(/\n/g, ' ')          // Remove newlines
+                    .replace(/\r/g, '')           // Remove carriage returns
+                    .replace(/,\s*]/g, ']')       // Fix trailing commas
+                    .replace(/,\s*}/g, '}');      // Fix trailing commas in objects
+
+                // Try to extract JSON if response contains other text
+                const jsonMatch = cleanedResponse.match(/\[.*\]/s);
+                if (jsonMatch) {
+                    vocabQuestions = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error('Could not find valid JSON in response');
+                }
+
+                // Validate the questions
+                if (!Array.isArray(vocabQuestions) || vocabQuestions.length === 0) {
+                    throw new Error('No valid questions generated');
+                }
+
+                // Validate each question has required fields
+                vocabQuestions = vocabQuestions.filter(q => 
+                    q && q.sentence && 
+                    q.word && 
+                    q.hint &&
+                    typeof q.sentence === 'string' &&
+                    typeof q.word === 'string' &&
+                    typeof q.hint === 'string'
+                );
+
+                if (vocabQuestions.length === 0) {
+                    throw new Error('No valid questions found in response');
+                }
+
+                document.getElementById('totalQuestions').textContent = vocabQuestions.length;
+                displayQuestion();
+
+            } catch (error) {
+                console.error('Error generating vocab questions:', error);
+                console.error('Failed response:', data?.reply); // Debug log
+                document.getElementById('vocabContent').innerHTML = `
+                    <div style="color: #ff4444; padding: 20px;">
+                        Error: ${error.message || 'Failed to generate questions'}.<br>
+                        Please try again or select a different note.
+                    </div>
+                `;
+            }
+        }
+
+        function displayQuestion() {
+            const vocabContent = document.getElementById('vocabContent');
+            const currentQuestion = vocabQuestions[currentIndex];
+
+            // Create sentence with input field
+            const sentenceWithInput = currentQuestion.sentence.replace('___', 
+                `<input type="text" class="word-input" id="answer${currentIndex}" 
+                placeholder="Type your answer...">`);
+
+            vocabContent.innerHTML = `
+                <div class="vocab-question">
+                    <div class="sentence">${sentenceWithInput}</div>
+                    <div class="hint">Hint: ${currentQuestion.hint}</div>
+                </div>
+                <button class="submit-btn" onclick="checkAnswer()">Submit Answer</button>
+            `;
+
+            document.getElementById('currentQuestion').textContent = currentIndex + 1;
+            
+            // Add enter key listener to input
+            document.getElementById(`answer${currentIndex}`).addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkAnswer();
+                }
+            });
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById(`answer${currentIndex}`);
+            const userAnswer = input.value.trim().toLowerCase();
+            const correctAnswer = vocabQuestions[currentIndex].word.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                input.classList.add('correct');
+                input.classList.remove('incorrect');
+                setTimeout(() => {
+                    if (currentIndex < vocabQuestions.length - 1) {
+                        currentIndex++;
+                        displayQuestion();
+                    } else {
+                        showResults();
+                    }
+                }, 1000);
+            } else {
+                input.classList.add('incorrect');
+                input.classList.remove('correct');
+            }
+        }
+
+        function showResults() {
+            const vocabContent = document.getElementById('vocabContent');
+            vocabContent.innerHTML = `
+                <div style="text-align: center;">
+                    <h2>Practice Complete!</h2>
+                    <button class="back-btn" onclick="window.location.href='vocab.html'">
+                        Back to Vocabulary
+                    </button>
+                </div>
+            `;
+        }
+
+        function confirmExit() {
+            if (confirm('Are you sure you want to exit? Your progress will be lost.')) {
+                window.location.href = 'vocab.html';
+            }
+        }
+    </script>
+</body>
+</html> 
