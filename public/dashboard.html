@@ -709,6 +709,22 @@
             background: #3182ce;
             transform: translateY(-1px);
         }
+
+        .assistant-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .assistant-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -757,6 +773,7 @@
                 <span id="aiConnectionStatus"></span>
             </div>
             <div class="button-group">
+                <button id="assistantBtn" class="assistant-btn">Assistant</button>
                 <button id="vocabBtn" class="vocab-btn">Vocab</button>
                 <button id="testBtn" class="test-btn">Test</button>
                 <button id="flashcardBtn" class="flashcard-btn">Flashcards</button>
@@ -1312,6 +1329,10 @@
 
         document.getElementById('vocabBtn').addEventListener('click', () => {
             window.location.href = 'vocab.html';
+        });
+
+        document.getElementById('assistantBtn').addEventListener('click', () => {
+            window.location.href = 'assistant.html';
         });
     </script>
 </body>

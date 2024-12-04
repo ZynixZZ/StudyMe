@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(25, 25, 25, 0.95);
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .chat-area {
+            height: 500px;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-y: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .message {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #2c5282;
+            color: white;
+            margin-left: auto;
+        }
+
+        .assistant-message {
+            background-color: #333;
+            color: white;
+            margin-right: auto;
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .note-select {
+            padding: 8px 12px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .note-select:focus {
+            outline: none;
+            border-color: #2c5282;
+        }
+
+        .selected-note {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(44, 82, 130, 0.2);
+            border: 1px solid #2c5282;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .selected-note.visible {
+            display: block;
+        }
+
+        .note-title {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .note-content {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <div class="container">
+        <div class="header">
+            <h1>AI Assistant</h1>
+            <div class="header-controls">
+                <select id="noteSelector" class="note-select">
+                    <option value="">Select a note to discuss...</option>
+                </select>
+                <button class="back-btn" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+            </div>
+        </div>
+        <div id="selectedNote" class="selected-note">
+            <div class="note-title" id="noteTitle"></div>
+            <div class="note-content" id="noteContent"></div>
+        </div>
+        <div id="chatArea" class="chat-area">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="input-area">
+            <input type="text" id="messageInput" class="message-input" placeholder="Ask me anything...">
+            <button onclick="sendMessage()" class="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let username = localStorage.getItem('username');
+
+        // Check if user is logged in
+        if (!username) {
+            window.location.replace('/login.html');
+        }
+
+        // Load notes into selector
+        function loadNotes() {
+            const noteSelector = document.getElementById('noteSelector');
+            let savedNotes = [];
+            
+            try {
+                savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+            } catch (e) {
+                console.error('Error loading notes:', e);
+            }
+
+            // Clear existing options except the first one
+            while (noteSelector.options.length > 1) {
+                noteSelector.remove(1);
+            }
+
+            // Add notes to selector
+            savedNotes.forEach((note, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = note.title || `Note ${index + 1}`;
+                noteSelector.appendChild(option);
+            });
+        }
+
+        // Handle note selection
+        document.getElementById('noteSelector').addEventListener('change', function() {
+            const selectedNote = document.getElementById('selectedNote');
+            const noteTitle = document.getElementById('noteTitle');
+            const noteContent = document.getElementById('noteContent');
+            
+            if (this.value === '') {
+                selectedNote.classList.remove('visible');
+                return;
+            }
+
+            try {
+                const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+                const note = savedNotes[this.value];
+                
+                if (note) {
+                    noteTitle.textContent = note.title || 'Untitled Note';
+                    noteContent.textContent = note.content || 'No content';
+                    selectedNote.classList.add('visible');
+
+                    // Append a system message about the selected note
+                    appendMessage('assistant', `I've loaded the note "${note.title || 'Untitled Note'}". What would you like to know about it?`);
+                }
+            } catch (e) {
+                console.error('Error loading selected note:', e);
+            }
+        });
+
+        // Modify sendMessage to include selected note context
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            const noteSelector = document.getElementById('noteSelector');
+            
+            if (!message) return;
+            
+            try {
+                appendMessage('user', message);
+                messageInput.value = '';
+
+                // Get selected note context
+                let noteContext = '';
+                if (noteSelector.value !== '') {
+                    const savedNotes = JSON.parse(localStorage.getItem('studyNotes')) || [];
+                    const selectedNote = savedNotes[noteSelector.value];
+                    if (selectedNote) {
+                        noteContext = `Note Title: ${selectedNote.title}\nNote Content: ${selectedNote.content}\n\n`;
+                    }
+                }
+
+                const response = await fetch('/api/ai-server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: noteContext + message,
+                        username: username,
+                        hasNoteContext: noteContext !== ''
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.reply) {
+                    appendMessage('assistant', data.reply);
+                } else {
+                    throw new Error('Empty response from server');
+                }
+
+            } catch (error) {
+                console.error('Chat error:', error);
+                appendMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+            }
+        }
+
+        function appendMessage(type, content) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Add enter key listener
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Load notes when page loads
+        document.addEventListener('DOMContentLoaded', loadNotes);
+    </script>
+</body>
+</html> 
