@@ -284,7 +284,7 @@ Duration: ${videoInfo.duration_text || 'Unknown Duration'}
 Please provide a structured summary:
 
 MAIN TOPICS:
-�� [Extract 3-4 main topics from the video's description]
+ [Extract 3-4 main topics from the video's description]
 
 KEY POINTS:
 • [List 4-5 key points based on the video's content]
@@ -398,6 +398,32 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
+});
+
+app.get('/api/proxy-model', async (req, res) => {
+    try {
+        const modelUrl = req.query.url;
+        if (!modelUrl) {
+            return res.status(400).json({ error: 'No URL provided' });
+        }
+
+        console.log('Proxying model from:', modelUrl);
+
+        const response = await fetch(modelUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch model: ${response.statusText}`);
+        }
+
+        // Forward the content type
+        res.setHeader('Content-Type', response.headers.get('content-type'));
+        
+        // Stream the response
+        response.body.pipe(res);
+
+    } catch (error) {
+        console.error('Model proxy error:', error);
+        res.status(500).json({ error: 'Failed to proxy model' });
+    }
 });
 
 // ... rest of your server code ...
