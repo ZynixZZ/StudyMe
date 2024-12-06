@@ -302,31 +302,6 @@ TAKEAWAYS:
     }
 });
 
-// Add this with your other API endpoints
-app.post('/api/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        console.log('Login attempt:', { username });
-
-        if (!username || !password) {
-            return res.status(400).json({ 
-                error: 'Username and password are required' 
-            });
-        }
-
-        // For now, just return success
-        // In a real app, you'd verify against a database
-        res.status(200).json({ 
-            message: 'Login successful',
-            username: username
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
 // ... rest of your server code ...
 
 const PORT = process.env.PORT || 3000;
