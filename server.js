@@ -9,12 +9,11 @@ import cors from 'cors';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { v2 as cloudinary } from 'cloudinary';
-import { WebSocketServer } from 'ws';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
-const wss = new WebSocketServer({ server });
 
 // Get current directory path (ESM equivalent of __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -48,6 +47,9 @@ console.log('Cloudinary Configuration:', {
     api_key: process.env.CLOUDINARY_API_KEY ? 'Present' : 'Missing',
     api_secret: process.env.CLOUDINARY_API_SECRET ? 'Present' : 'Missing'
 });
+
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/api/convert-to-3d', async (req, res) => {
     try {
@@ -162,62 +164,44 @@ app.get('/api/conversion-status/:taskId', async (req, res) => {
     }
 });
 
+// Add this to your existing endpoint or replace the current one
+app.post('/api/ai-server', async (req, res) => {
+    try {
+        const { message, username } = req.body;
+        console.log('AI request from:', username, 'Message:', message);
+
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        // Ensure the API key is set
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set');
+            return res.status(500).json({ error: 'AI service configuration error' });
+        }
+
+        // Get Gemini model
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        // Generate response from Gemini
+        const result = await model.generateContent(message);
+        const response = await result.response;
+        const reply = response.text();
+
+        console.log('AI response:', reply);
+        res.status(200).json({ reply });
+
+    } catch (error) {
+        console.error('AI server error:', error.message);
+        console.error('Stack trace:', error.stack);
+        res.status(500).json({ error: 'Failed to get AI response' });
+    }
+});
+
 // ... rest of your server code ...
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
-const clients = new Map();
-
-wss.on('connection', (ws) => {
-    console.log('New WebSocket connection established');
-
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message.toString());
-            console.log('Received WebSocket message:', data);
-
-            if (data.type === 'connection') {
-                clients.set(ws, data.username);
-                console.log(`${data.username} connected to chat`);
-                
-                broadcastMessage({
-                    type: 'system',
-                    message: `${data.username} joined the chat`
-                });
-            } else if (data.type === 'chat') {
-                broadcastMessage({
-                    type: 'chat',
-                    username: clients.get(ws),
-                    message: data.message
-                });
-            }
-        } catch (error) {
-            console.error('WebSocket message processing error:', error);
-        }
-    });
-
-    ws.on('close', () => {
-        const username = clients.get(ws);
-        if (username) {
-            console.log(`${username} disconnected from chat`);
-            broadcastMessage({
-                type: 'system',
-                message: `${username} left the chat`
-            });
-            clients.delete(ws);
-        }
-    });
-});
-
-// Helper function to broadcast messages
-function broadcastMessage(message) {
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocketServer.OPEN) {
-            client.send(JSON.stringify(message));
-        }
-    });
-}
 
