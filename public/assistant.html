@@ -6,11 +6,21 @@
     <title>AI Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* Add theme colors */
+        :root {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --accent-color: #4d7cfe;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+        }
+
+        /* Update only colors, keep existing layout */
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
-            color: #ffffff;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
         }
@@ -19,7 +29,7 @@
             max-width: 800px;
             margin: 20px auto;
             padding: 20px;
-            background: rgba(25, 25, 25, 0.95);
+            background: var(--secondary-bg);
             border: 2px solid #333;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -36,7 +46,7 @@
 
         .back-btn {
             padding: 8px 16px;
-            background: #2c5282;
+            background: var(--accent-color);
             color: white;
             border: none;
             border-radius: 4px;
@@ -45,7 +55,7 @@
         }
 
         .back-btn:hover {
-            background: #3182ce;
+            background: #5a87fe;
             transform: translateY(-1px);
         }
 
@@ -66,16 +76,21 @@
         .message-input {
             flex: 1;
             padding: 12px;
-            background: #2a2a2a;
-            border: 1px solid #333;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 5px;
-            color: #fff;
+            color: var(--text-primary);
             font-size: 15px;
+        }
+
+        .message-input:focus {
+            border-color: var(--accent-color);
+            outline: none;
         }
 
         .send-btn {
             padding: 12px 24px;
-            background: #2c5282;
+            background: var(--accent-color);
             color: white;
             border: none;
             border-radius: 4px;
@@ -84,7 +99,7 @@
         }
 
         .send-btn:hover {
-            background: #3182ce;
+            background: #5a87fe;
             transform: translateY(-1px);
         }
 
@@ -94,17 +109,18 @@
             border-radius: 8px;
             max-width: 80%;
             word-wrap: break-word;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .user-message {
-            background-color: #2c5282;
+            background-color: var(--accent-color);
             color: white;
             margin-left: auto;
         }
 
         .assistant-message {
-            background-color: #333;
-            color: white;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
             margin-right: auto;
         }
 
@@ -131,17 +147,17 @@
 
         .note-select {
             padding: 8px 12px;
-            background: #2a2a2a;
-            border: 1px solid #333;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 4px;
-            color: #fff;
+            color: var(--text-primary);
             font-size: 14px;
             min-width: 200px;
         }
 
         .note-select:focus {
             outline: none;
-            border-color: #2c5282;
+            border-color: var(--accent-color);
         }
 
         .selected-note {
@@ -159,13 +175,13 @@
 
         .note-title {
             margin: 0 0 10px 0;
-            color: #fff;
+            color: var(--text-primary);
             font-size: 16px;
             font-weight: bold;
         }
 
         .note-content {
-            color: #ccc;
+            color: var(--text-secondary);
             font-size: 14px;
             line-height: 1.4;
             max-height: 100px;

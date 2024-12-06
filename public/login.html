@@ -3,242 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - StudyMe</title>
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --accent-color: #4d7cfe;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --success-color: #48bb78;
+            --error-color: #f56565;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            background-color: #1a1a1a;
-            color: #fff;
+            justify-content: center;
         }
 
         .login-container {
-            background: rgba(30, 30, 30, 0.95);
-            padding: 2.5rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background: var(--secondary-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 400px;
             margin: 20px;
-            border: 2px solid #333;
+            animation: fadeIn 0.5s ease;
         }
 
-        h1 {
+        .title {
+            color: var(--text-primary);
             text-align: center;
-            margin-bottom: 2rem;
-            color: #fff;
-            font-family: 'Orbitron', sans-serif;
+            margin-bottom: 30px;
+            font-size: 24px;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
         }
 
-        label {
+        .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #fff;
-            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
         }
 
         input {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #444;
-            border-radius: 5px;
-            background: rgba(40, 40, 40, 0.9);
-            color: #fff;
-            font-size: 1rem;
-            box-sizing: border-box;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 16px;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
 
         input:focus {
             outline: none;
-            border-color: #2c5282;
-            box-shadow: 0 0 10px rgba(44, 82, 130, 0.3);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(77, 124, 254, 0.2);
         }
 
         button {
             width: 100%;
-            padding: 0.75rem;
-            background: #2c5282;
+            padding: 12px;
+            background: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 500;
         }
 
         button:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            background: #5a87fe;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(77, 124, 254, 0.2);
         }
 
-        button:active {
-            transform: translateY(0);
-        }
-
-        .links {
+        .signup-link {
             text-align: center;
-            margin-top: 1.5rem;
+            margin-top: 20px;
+            color: var(--text-secondary);
         }
 
-        .links a {
-            color: #4299e1;
+        .signup-link a {
+            color: var(--accent-color);
             text-decoration: none;
-            margin: 0 10px;
             transition: color 0.3s ease;
-            font-size: 0.9rem;
         }
 
-        .links a:hover {
-            color: #63b3ed;
+        .signup-link a:hover {
+            color: #5a87fe;
         }
 
-        #error-message {
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-            display: none;
-            font-size: 0.9rem;
+        .error-message {
+            background: rgba(245, 101, 101, 0.1);
+            color: var(--error-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
         }
 
-        #error-message.error {
-            background-color: rgba(220, 38, 38, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(220, 38, 38, 0.2);
+        .success-message {
+            background: rgba(72, 187, 120, 0.1);
+            color: var(--success-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
         }
 
-        #error-message.success {
-            background-color: rgba(22, 163, 74, 0.1);
-            color: #22c55e;
-            border: 1px solid rgba(22, 163, 74, 0.2);
-        }
-
-        .cyber-lines {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0.05;
-            background: 
-                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
-                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
-            background-size: 20px 20px;
-        }
-
-        @media (max-width: 480px) {
-            .login-container {
-                margin: 10px;
-                padding: 1.5rem;
-            }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <div class="cyber-lines"></div>
     <div class="login-container">
-        <h1>Login to StudyMe</h1>
-        <div id="error-message"></div>
+        <h1 class="title">Login</h1>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autocomplete="username">
+                <input type="text" id="username" required>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+                <input type="password" id="password" required>
             </div>
             <button type="submit">Login</button>
         </form>
-        <div class="links">
-            <a href="/signup.html">Don't have an account? Sign up</a>
+        <div class="signup-link">
+            Don't have an account? <a href="signup.html">Sign up</a>
         </div>
     </div>
 
     <script>
-        // Only redirect if we're on the login page AND already logged in
-        window.addEventListener('load', () => {
-            const username = localStorage.getItem('username');
-            const currentPath = window.location.pathname;
-            
-            console.log('Current path:', currentPath);
-            console.log('Stored username:', username);
-            
-            // Redirect to dashboard if already logged in
-            if (username && currentPath === '/login.html') {
-                console.log('User already logged in, redirecting to dashboard...');
-                window.location.replace('/dashboard.html');
-                return;
-            }
-        });
-
-        // Handle form submission
-        document.getElementById('loginForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            console.log('Form submitted');
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const errorElement = document.getElementById('error-message');
-            
-            // Clear previous messages
-            errorElement.style.display = 'none';
-            errorElement.className = '';
-            
+
             try {
-                console.log('Sending login request...');
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
+                    body: JSON.stringify({ username, password })
                 });
 
-                console.log('Response received:', response.status);
                 const data = await response.json();
-                console.log('Response data:', data);
-                
-                if (!response.ok) {
-                    throw new Error('Login failed');
+
+                if (response.ok) {
+                    // Store username in localStorage
+                    localStorage.setItem('username', username);
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'success-message';
+                    successMsg.textContent = 'Login successful! Redirecting...';
+                    document.querySelector('.login-container').insertBefore(successMsg, document.querySelector('.signup-link'));
+
+                    // Redirect after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                } else {
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = data.error || 'Login failed. Please try again.';
+                    document.querySelector('.login-container').insertBefore(errorMsg, document.querySelector('.signup-link'));
                 }
-
-                // Store user data
-                console.log('Storing username:', username);
-                localStorage.setItem('username', data.username);
-                localStorage.setItem('chatUsername', data.username);
-
-                // Show success message
-                errorElement.textContent = 'Login successful! Redirecting...';
-                errorElement.style.display = 'block';
-                errorElement.className = 'success';
-
-                // Update redirect to explicitly use .html
-                window.location.replace('/dashboard.html');
-                
             } catch (error) {
                 console.error('Login error:', error);
-                errorElement.textContent = 'Login failed. Please try again.';
-                errorElement.style.display = 'block';
-                errorElement.className = 'error';
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'An error occurred. Please try again.';
+                document.querySelector('.login-container').insertBefore(errorMsg, document.querySelector('.signup-link'));
             }
+        });
+
+        // Clear any existing messages when the form inputs change
+        ['username', 'password'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                const messages = document.querySelectorAll('.error-message, .success-message');
+                messages.forEach(msg => msg.remove());
+            });
         });
     </script>
 </body>
