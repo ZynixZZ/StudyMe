@@ -10,6 +10,7 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { v2 as cloudinary } from 'cloudinary';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 
 const app = express();
 const server = createServer(app);
@@ -195,6 +196,134 @@ app.post('/api/ai-server', async (req, res) => {
         console.error('AI server error:', error.message);
         console.error('Stack trace:', error.stack);
         res.status(500).json({ error: 'Failed to get AI response' });
+    }
+});
+
+// Add this with your other endpoints, before the catch-all route
+app.post('/api/summarize', async (req, res) => {
+    try {
+        const { videoUrl, username } = req.body;
+        console.log('Summary request from:', username, 'URL:', videoUrl);
+
+        if (!videoUrl) {
+            return res.status(400).json({ error: 'Video URL is required' });
+        }
+
+        if (!process.env.SERP_API_KEY) {
+            console.error('SERP_API_KEY is not set');
+            return res.status(500).json({ error: 'API configuration error' });
+        }
+
+        // Extract video ID
+        let videoId;
+        try {
+            const url = new URL(videoUrl);
+            if (url.hostname.includes('youtube.com')) {
+                videoId = url.searchParams.get('v');
+            } else if (url.hostname.includes('youtu.be')) {
+                videoId = url.pathname.slice(1);
+            }
+            
+            if (!videoId) {
+                throw new Error('Could not extract video ID');
+            }
+            console.log('Processing video ID:', videoId);
+        } catch (error) {
+            console.error('URL parsing error:', error);
+            return res.status(400).json({ error: 'Invalid YouTube URL format' });
+        }
+
+        // Fetch video details from SerpApi
+        console.log('Fetching video data from SerpApi');
+        const apiUrl = `https://serpapi.com/search.json`;
+        const params = {
+            engine: 'youtube',
+            search_query: videoId,
+            api_key: process.env.SERP_API_KEY
+        };
+
+        console.log('Making API request with params:', { ...params, api_key: '***' });
+        
+        const serpApiResponse = await axios.get(apiUrl, { params });
+        
+        if (!serpApiResponse.data || !serpApiResponse.data.video_results) {
+            console.error('API Response:', serpApiResponse.data);
+            throw new Error('Invalid response from API');
+        }
+
+        const videoInfo = serpApiResponse.data.video_results[0] || {};
+
+        // Create prompt for Gemini
+        const prompt = `Analyze this YouTube video based on its metadata:
+
+VIDEO DETAILS:
+Title: ${videoInfo.title || 'Unknown Title'}
+Channel: ${videoInfo.channel?.name || 'Unknown Channel'}
+Views: ${videoInfo.views || 'Unknown Views'}
+Description: ${videoInfo.description || 'No description available'}
+Duration: ${videoInfo.duration_text || 'Unknown Duration'}
+
+Please provide a structured summary:
+
+MAIN TOPICS:
+• [Extract 3-4 main topics from the video's description]
+
+KEY POINTS:
+• [List 4-5 key points based on the video's content]
+
+DETAILED SUMMARY:
+[2-3 paragraphs summarizing the main content]
+
+TAKEAWAYS:
+• [List 2-3 main takeaways]`;
+
+        console.log('Sending prompt to Gemini');
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const geminiResult = await model.generateContent(prompt);
+        const geminiResponse = await geminiResult.response;
+        const summary = geminiResponse.text();
+
+        console.log('Summary generated successfully');
+        res.status(200).json({ summary });
+
+    } catch (error) {
+        console.error('Detailed summarizer error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            apiKey: process.env.SERP_API_KEY ? 'Present' : 'Missing',
+            apiKeyLength: process.env.SERP_API_KEY ? process.env.SERP_API_KEY.length : 0
+        });
+        
+        res.status(500).json({ 
+            error: 'Failed to generate summary',
+            details: error.message 
+        });
+    }
+});
+
+// Add this with your other API endpoints
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        console.log('Login attempt:', { username });
+
+        if (!username || !password) {
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
+        }
+
+        // For now, just return success
+        // In a real app, you'd verify against a database
+        res.status(200).json({ 
+            message: 'Login successful',
+            username: username
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
