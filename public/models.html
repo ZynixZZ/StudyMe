@@ -30,6 +30,7 @@
             border: 2px solid #333;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease forwards;
         }
 
         h1 {
@@ -37,6 +38,7 @@
             color: #fff;
             margin-bottom: 30px;
             font-family: 'Orbitron', sans-serif;
+            animation: slideUp 0.6s ease forwards;
         }
 
         .upload-section {
@@ -44,6 +46,7 @@
             flex-direction: column;
             gap: 15px;
             margin-bottom: 30px;
+            animation: slideUp 0.7s ease forwards;
         }
 
         #imageInput {
@@ -66,6 +69,7 @@
             transition: all 0.3s ease;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.4s ease forwards;
         }
 
         #convertButton:hover, #downloadButton:hover {
@@ -85,6 +89,7 @@
             margin: 15px 0;
             border-radius: 5px;
             text-align: center;
+            animation: fadeIn 0.3s ease forwards;
         }
 
         .status-success { 
@@ -100,6 +105,7 @@
         .status-pending { 
             background: rgba(0, 0, 255, 0.1);
             color: #60a5fa; 
+            animation: pulse 1.5s infinite ease-in-out;
         }
 
         .cyber-lines {
@@ -130,6 +136,7 @@
             transition: all 0.3s ease;
             font-family: inherit;
             z-index: 1001;
+            animation: slideIn 0.5s ease forwards;
         }
 
         .back-btn:hover {
@@ -194,6 +201,39 @@
         .model-card:hover {
             transform: translateY(-2px);
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
     </style>
 </head>
 <body>
@@ -237,9 +277,9 @@
                 if (result.status === 'SUCCEEDED') {
                     clearInterval(statusCheckInterval);
                     
-                    status.textContent = 'Conversion successful!';
-                    status.className = 'status-success';
+                    updateStatus('Conversion successful!', 'success');
                     downloadButton.style.display = 'block';
+                    downloadButton.style.animation = 'fadeIn 0.4s ease forwards';
                     
                     // Log the entire result.result object
                     console.log('Result object:', result.result);
@@ -262,11 +302,10 @@
                         status.textContent = 'Error: Model URL not found';
                     }
                 } else if (result.status === 'IN_PROGRESS') {
-                    status.textContent = `Converting image... Time elapsed: ${Math.floor(conversionTimer/60)}:${(conversionTimer%60).toString().padStart(2, '0')}`;
-                    conversionTimer += 5;
+                    updateStatus(`Converting image... Time elapsed: ${Math.floor(conversionTimer/60)}:${(conversionTimer%60).toString().padStart(2, '0')}`, 'pending');
                 } else if (result.status === 'FAILED') {
                     clearInterval(statusCheckInterval);
-                    throw new Error('Conversion failed');
+                    updateStatus('Conversion failed', 'error');
                 }
             } catch (error) {
                 clearInterval(statusCheckInterval);
@@ -363,6 +402,14 @@
                 console.error('Conversion error:', error);
                 throw error;
             }
+        }
+
+        function updateStatus(message, type) {
+            status.style.animation = 'none';
+            status.offsetHeight; // Trigger reflow
+            status.style.animation = 'fadeIn 0.3s ease forwards';
+            status.textContent = message;
+            status.className = `status-${type}`;
         }
     </script>
 </body>

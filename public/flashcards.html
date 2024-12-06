@@ -16,6 +16,7 @@
         .container {
             max-width: 800px;
             margin: 0 auto;
+            animation: fadeIn 0.5s ease forwards;
         }
 
         .header {
@@ -23,6 +24,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            animation: slideUp 0.5s ease forwards;
         }
 
         .back-btn {
@@ -52,11 +54,15 @@
             padding: 15px;
             cursor: pointer;
             transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease forwards;
+            animation-fill-mode: both;
+            animation-delay: calc(var(--index) * 0.1s);
         }
 
         .note-card:hover {
             transform: translateY(-5px);
             background: #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .note-title {
@@ -86,6 +92,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            animation: slideUp 0.6s ease forwards;
         }
 
         .counter-input {
@@ -116,6 +123,22 @@
         .flashcard {
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -135,14 +158,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Check if user is logged in
             const username = localStorage.getItem('username');
             if (!username) {
                 window.location.replace('/login.html');
                 return;
             }
 
-            loadNotes();
+            showLoading();
+            setTimeout(loadNotes, 300);
         });
 
         function loadNotes() {
@@ -161,7 +184,7 @@
             }
 
             notesGrid.innerHTML = savedNotes.map((note, index) => `
-                <div class="note-card" onclick="selectNote(${index})">
+                <div class="note-card" style="--index: ${index}" onclick="selectNote(${index})">
                     <div class="note-title">${note.title || 'Untitled Note'}</div>
                     <div class="note-date">${new Date(note.timestamp).toLocaleDateString()}</div>
                     <div class="note-preview">${note.content ? note.content.substring(0, 100) + '...' : 'No content'}</div>
@@ -175,6 +198,11 @@
             const cardCount = document.getElementById('cardCount').value;
             localStorage.setItem('flashcardCount', cardCount);
             window.location.href = 'flashcard-study.html';
+        }
+
+        function showLoading() {
+            const notesGrid = document.getElementById('notesGrid');
+            notesGrid.innerHTML = '<p class="loading" style="grid-column: 1/-1; text-align: center;">Loading notes...</p>';
         }
     </script>
 </body>

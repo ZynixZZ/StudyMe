@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Take Test</title>
     <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
         body {
             margin: 0;
             padding: 20px;
@@ -16,6 +49,7 @@
         .container {
             max-width: 800px;
             margin: 0 auto;
+            animation: fadeIn 0.5s ease forwards;
         }
 
         .header {
@@ -23,6 +57,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            animation: slideIn 0.6s ease forwards;
         }
 
         .back-btn {
@@ -44,6 +79,7 @@
             padding: 40px;
             font-size: 1.2em;
             color: #888;
+            animation: pulse 1.5s infinite ease-in-out;
         }
 
         .question-container {
@@ -52,6 +88,9 @@
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.5s ease forwards;
+            animation-fill-mode: both;
+            animation-delay: calc(var(--index) * 0.1s);
         }
 
         .question {
@@ -75,15 +114,37 @@
             transition: all 0.2s ease;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
         .option:hover {
             background: #3a3a3a;
         }
 
+        .option:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .option:active:after {
+            width: 300px;
+            height: 300px;
+        }
+
         .option.selected {
             background: #4d7cfe;
             color: white;
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(77, 124, 254, 0.3);
         }
 
         .submit-btn {
@@ -96,10 +157,31 @@
             font-size: 1.1em;
             margin-top: 20px;
             transition: all 0.3s ease;
+            animation: slideUp 0.7s ease forwards;
+            position: relative;
+            overflow: hidden;
         }
 
         .submit-btn:hover {
             background: #3182ce;
+        }
+
+        .submit-btn:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .submit-btn:active:after {
+            width: 300px;
+            height: 300px;
         }
 
         .results {
@@ -108,6 +190,7 @@
             border-radius: 8px;
             padding: 20px;
             margin-top: 20px;
+            animation: slideUp 0.6s ease forwards;
         }
 
         .score {
@@ -115,6 +198,7 @@
             text-align: center;
             margin-bottom: 20px;
             color: #3182ce;
+            animation: fadeIn 0.8s ease forwards;
         }
 
         .cyber-lines {

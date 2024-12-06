@@ -54,12 +54,26 @@
             border-radius: 8px;
             padding: 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            animation: expandIn 0.5s ease forwards;
+            animation-delay: calc(var(--index) * 0.1s);
+        }
+
+        @keyframes expandIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .note-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-5px);
             background: #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .note-title {
