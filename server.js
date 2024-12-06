@@ -61,61 +61,71 @@ app.post('/api/convert-to-3d', async (req, res) => {
     try {
         const { image } = req.body;
         
-        console.log('Uploading image to Cloudinary...');
+        if (!image) {
+            return res.status(400).json({ error: 'No image data provided' });
+        }
+
+        console.log('Starting 3D conversion process...');
         
         // Upload image to Cloudinary
+        console.log('Uploading to Cloudinary...');
         const uploadResponse = await cloudinary.uploader.upload(image, {
             folder: '3d-conversions'
         });
 
-        console.log('Cloudinary upload response:', uploadResponse);
-
-        // Make sure we have the secure_url from Cloudinary
         if (!uploadResponse.secure_url) {
-            throw new Error('No secure URL received from Cloudinary');
+            throw new Error('Failed to upload image to Cloudinary');
         }
 
-        // Create the Meshy request body
-        const meshyRequestBody = {
-            "image_url": uploadResponse.secure_url,
-            "webhook_url": "",
-            "settings": {
-                "format": "glb"
+        console.log('Image uploaded successfully:', uploadResponse.secure_url);
+
+        // Verify Meshy API key
+        if (!process.env.MESHY_API_KEY) {
+            throw new Error('MESHY_API_KEY not configured');
+        }
+
+        // Create Meshy request
+        const meshyRequest = {
+            image_url: uploadResponse.secure_url,
+            webhook_url: "",
+            settings: {
+                format: "glb"
             }
         };
 
-        console.log('Sending to Meshy with body:', JSON.stringify(meshyRequestBody, null, 2));
-
+        console.log('Sending request to Meshy API...');
+        
         const meshyResponse = await fetch('https://api.meshy.ai/v1/image-to-3d', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${process.env.MESHY_API_KEY}`,
-                'Accept': 'application/json',
-                'X-Api-Version': '2024-01'
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(meshyRequestBody)
+            body: JSON.stringify(meshyRequest)
         });
+
+        if (!meshyResponse.ok) {
+            const errorData = await meshyResponse.json();
+            console.error('Meshy API error:', errorData);
+            throw new Error(`Meshy API error: ${errorData.message || 'Unknown error'}`);
+        }
 
         const responseData = await meshyResponse.json();
         console.log('Meshy API Response:', responseData);
 
-        if (meshyResponse.status === 202) {
-            // Send back the task ID to the client
-            res.json({
-                success: true,
-                taskId: responseData.result,
-                status: 'processing'
-            });
-        } else {
-            throw new Error(`Unexpected response: ${JSON.stringify(responseData)}`);
-        }
+        res.json({
+            success: true,
+            taskId: responseData.result,
+            status: 'processing'
+        });
 
     } catch (error) {
-        console.error('Detailed error:', error);
+        console.error('3D Conversion error:', error);
         res.status(500).json({
             error: 'Failed to convert image',
-            details: error.message
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -274,7 +284,7 @@ Duration: ${videoInfo.duration_text || 'Unknown Duration'}
 Please provide a structured summary:
 
 MAIN TOPICS:
-• [Extract 3-4 main topics from the video's description]
+�� [Extract 3-4 main topics from the video's description]
 
 KEY POINTS:
 • [List 4-5 key points based on the video's content]
