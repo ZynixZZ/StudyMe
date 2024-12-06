@@ -339,6 +339,31 @@
             const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
             document.getElementById('fileName').textContent = fileName;
         });
+
+        async function convertImage(imageUrl) {
+            try {
+                console.log('Sending image URL:', imageUrl);
+                const response = await fetch('/api/convert-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ imageUrl })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Server error details:', errorData);
+                    throw new Error(errorData.error || 'Failed to convert image');
+                }
+
+                const data = await response.json();
+                return data.description;
+            } catch (error) {
+                console.error('Conversion error:', error);
+                throw error;
+            }
+        }
     </script>
 </body>
 </html>
