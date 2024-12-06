@@ -1,0 +1,31 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const modelRoutes = require('./routes/modelRoutes');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Routes
+app.use('/api', modelRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        error: 'Something went wrong!',
+        details: err.message
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`API endpoint available at http://localhost:${PORT}/api/generate-model`);
+});
