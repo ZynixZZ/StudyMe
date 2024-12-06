@@ -259,62 +259,121 @@
     <script>
         let conversionTimer = 0;
         let statusCheckInterval;
+        let timerInterval;
 
         const imageInput = document.getElementById('imageInput');
         const convertButton = document.getElementById('convertButton');
         const status = document.getElementById('status');
         const downloadButton = document.getElementById('downloadButton');
 
-        const checkStatus = async (taskId) => {
-            try {
-                console.log('Checking status for task:', taskId);
-                const statusResponse = await fetch(`/api/conversion-status/${taskId}`);
-                const statusData = await statusResponse.json();
+        function processImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
                 
-                const result = statusData.result;
-                console.log('Full status response:', result);
+                reader.onload = function(e) {
+                    const img = new Image();
+                    
+                    img.onload = function() {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            const MAX_WIDTH = 800;
+                            const MAX_HEIGHT = 800;
+                            
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                            
+                            if (!base64String || base64String === 'data:,') {
+                                throw new Error('Invalid image conversion');
+                            }
+                            
+                            resolve(base64String);
+                        } catch (error) {
+                            console.error('Image processing error:', error);
+                            reject(new Error('Failed to process image'));
+                        }
+                    };
+                    
+                    img.onerror = function() {
+                        reject(new Error('Failed to load image'));
+                    };
+                    
+                    img.src = e.target.result;
+                };
                 
-                if (result.status === 'SUCCEEDED') {
-                    clearInterval(statusCheckInterval);
-                    
-                    updateStatus('Conversion successful!', 'success');
-                    downloadButton.style.display = 'block';
-                    downloadButton.style.animation = 'fadeIn 0.4s ease forwards';
-                    
-                    // Log the entire result.result object
-                    console.log('Result object:', result.result);
-                    
-                    if (result.result && result.result.modelUrl) {
-                        const downloadUrl = result.result.modelUrl;
-                        console.log('Found model URL:', downloadUrl);
-                        
-                        // Create a direct download link
-                        downloadButton.onclick = () => {
-                            const link = document.createElement('a');
-                            link.href = downloadUrl;
-                            link.download = 'model.glb';  // Suggest a filename
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                        };
-                    } else {
-                        console.error('Model URL not found in:', result);
-                        status.textContent = 'Error: Model URL not found';
-                    }
-                } else if (result.status === 'IN_PROGRESS') {
-                    updateStatus(`Converting image... Time elapsed: ${Math.floor(conversionTimer/60)}:${(conversionTimer%60).toString().padStart(2, '0')}`, 'pending');
-                } else if (result.status === 'FAILED') {
-                    clearInterval(statusCheckInterval);
-                    updateStatus('Conversion failed', 'error');
-                }
-            } catch (error) {
-                clearInterval(statusCheckInterval);
-                console.error('Status check error:', error);
-                status.textContent = 'Error checking conversion status. Please try again.';
-                status.className = 'status-error';
-                convertButton.disabled = false;
+                reader.onerror = function() {
+                    reject(new Error('Failed to read file'));
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateStatus(message, type) {
+            status.style.animation = 'none';
+            status.offsetHeight; // Trigger reflow
+            status.style.animation = 'fadeIn 0.3s ease forwards';
+            status.textContent = message;
+            status.className = `status-${type}`;
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            
+            if (!file) {
+                updateStatus('No file selected', 'error');
+                return;
             }
-        };
+            
+            if (!file.type.startsWith('image/')) {
+                updateStatus('Please select an image file', 'error');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                updateStatus('Image must be less than 5MB', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Processing image...', 'pending');
+                const base64String = await processImage(file);
+                
+                updateStatus('Image ready for conversion', 'success');
+                convertButton.disabled = false;
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                updateStatus('Error: ' + error.message, 'error');
+                convertButton.disabled = true;
+            }
+        }
+
+        imageInput.addEventListener('change', handleImageUpload);
+
+        imageInput.addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
+            document.getElementById('fileName').textContent = fileName;
+        });
 
         convertButton.addEventListener('click', async () => {
             try {
@@ -325,17 +384,16 @@
                 }
 
                 convertButton.disabled = true;
-                status.textContent = 'Converting image to 3D model...';
-                status.className = 'status-pending';
+                updateStatus('Converting image to 3D model...', 'pending');
                 downloadButton.style.display = 'none';
 
-                // Reset timer
                 conversionTimer = 0;
-                
-                // Clear any existing interval
-                if (statusCheckInterval) {
-                    clearInterval(statusCheckInterval);
-                }
+                if (statusCheckInterval) clearInterval(statusCheckInterval);
+                if (timerInterval) clearInterval(timerInterval);
+
+                timerInterval = setInterval(() => {
+                    conversionTimer++;
+                }, 1000);
 
                 const reader = new FileReader();
                 reader.onload = async (e) => {
@@ -356,9 +414,7 @@
                     }
 
                     if (data.taskId) {
-                        // Start checking status every 5 seconds
                         statusCheckInterval = setInterval(() => checkStatus(data.taskId), 5000);
-                        // Do initial check right away
                         checkStatus(data.taskId);
                     }
                 };
@@ -366,51 +422,57 @@
                 reader.readAsDataURL(file);
 
             } catch (error) {
+                clearInterval(timerInterval);
                 console.error('Conversion error:', error);
-                status.textContent = 'Error converting image. Please try again.';
-                status.className = 'status-error';
+                updateStatus('Error converting image. Please try again.', 'error');
                 convertButton.disabled = false;
             }
         });
 
-        // Update file name display when file is selected
-        document.getElementById('imageInput').addEventListener('change', function(e) {
-            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
-            document.getElementById('fileName').textContent = fileName;
-        });
-
-        async function convertImage(imageUrl) {
+        const checkStatus = async (taskId) => {
             try {
-                console.log('Sending image URL:', imageUrl);
-                const response = await fetch('/api/convert-image', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ imageUrl })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Server error details:', errorData);
-                    throw new Error(errorData.error || 'Failed to convert image');
+                const statusResponse = await fetch(`/api/conversion-status/${taskId}`);
+                const statusData = await statusResponse.json();
+                
+                const result = statusData.result;
+                
+                if (result.status === 'SUCCEEDED') {
+                    clearInterval(statusCheckInterval);
+                    clearInterval(timerInterval);
+                    
+                    updateStatus('Conversion successful!', 'success');
+                    downloadButton.style.display = 'block';
+                    downloadButton.style.animation = 'fadeIn 0.4s ease forwards';
+                    
+                    if (result.result && result.result.modelUrl) {
+                        const downloadUrl = result.result.modelUrl;
+                        downloadButton.onclick = () => {
+                            const link = document.createElement('a');
+                            link.href = downloadUrl;
+                            link.download = 'model.glb';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        };
+                    } else {
+                        console.error('Model URL not found in:', result);
+                        updateStatus('Error: Model URL not found', 'error');
+                    }
+                } else if (result.status === 'IN_PROGRESS') {
+                    updateStatus(`Converting image... Time elapsed: ${Math.floor(conversionTimer/60)}:${(conversionTimer%60).toString().padStart(2, '0')}`, 'pending');
+                } else if (result.status === 'FAILED') {
+                    clearInterval(statusCheckInterval);
+                    clearInterval(timerInterval);
+                    updateStatus('Conversion failed', 'error');
                 }
-
-                const data = await response.json();
-                return data.description;
             } catch (error) {
-                console.error('Conversion error:', error);
-                throw error;
+                clearInterval(statusCheckInterval);
+                clearInterval(timerInterval);
+                console.error('Status check error:', error);
+                updateStatus('Error checking conversion status. Please try again.', 'error');
+                convertButton.disabled = false;
             }
-        }
-
-        function updateStatus(message, type) {
-            status.style.animation = 'none';
-            status.offsetHeight; // Trigger reflow
-            status.style.animation = 'fadeIn 0.3s ease forwards';
-            status.textContent = message;
-            status.className = `status-${type}`;
-        }
+        };
     </script>
 </body>
 </html>
