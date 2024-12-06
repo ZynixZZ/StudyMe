@@ -14,7 +14,12 @@ import axios from 'axios';
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Get current directory path (ESM equivalent of __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -165,7 +170,7 @@ app.get('/api/conversion-status/:taskId', async (req, res) => {
     }
 });
 
-// Add this to your existing endpoint or replace the current one
+// Update your existing AI server endpoint
 app.post('/api/ai-server', async (req, res) => {
     try {
         const { message, username } = req.body;
@@ -184,24 +189,21 @@ app.post('/api/ai-server', async (req, res) => {
         // Get Gemini model
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        // Send acknowledgment that message was received
-        res.write(JSON.stringify({ status: 'received', userMessage: message }));
-
         // Generate response from Gemini
         const result = await model.generateContent(message);
         const response = await result.response;
         const reply = response.text();
 
-        console.log('AI response:', reply);
-        
-        // Send the AI response
-        res.write(JSON.stringify({ reply }));
-        res.end();
+        // Ensure the reply is properly escaped for JSON
+        const sanitizedReply = reply.replace(/[\n\r]/g, ' ').trim();
+
+        console.log('AI response:', sanitizedReply);
+        return res.json({ reply: sanitizedReply });
 
     } catch (error) {
         console.error('AI server error:', error.message);
         console.error('Stack trace:', error.stack);
-        res.status(500).json({ error: 'Failed to get AI response' });
+        return res.status(500).json({ error: 'Failed to get AI response' });
     }
 });
 
@@ -348,6 +350,44 @@ app.post('/api/convert-image', async (req, res) => {
             details: error.stack 
         });
     }
+});
+
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    socket.on('chat message', async (data) => {
+        try {
+            console.log('Received message:', data);
+            
+            // Emit the user message back to all clients
+            io.emit('chat message', {
+                message: data.message,
+                isAI: false
+            });
+
+            // Get Gemini model
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+            // Generate response
+            const result = await model.generateContent(data.message);
+            const response = await result.response;
+            const reply = response.text();
+
+            // Emit AI response
+            io.emit('chat message', {
+                message: reply,
+                isAI: true
+            });
+
+        } catch (error) {
+            console.error('AI error:', error);
+            socket.emit('error', { message: 'Failed to get AI response' });
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
 });
 
 // ... rest of your server code ...
