@@ -184,13 +184,19 @@ app.post('/api/ai-server', async (req, res) => {
         // Get Gemini model
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+        // Send acknowledgment that message was received
+        res.write(JSON.stringify({ status: 'received', userMessage: message }));
+
         // Generate response from Gemini
         const result = await model.generateContent(message);
         const response = await result.response;
         const reply = response.text();
 
         console.log('AI response:', reply);
-        res.status(200).json({ reply });
+        
+        // Send the AI response
+        res.write(JSON.stringify({ reply }));
+        res.end();
 
     } catch (error) {
         console.error('AI server error:', error.message);
@@ -324,6 +330,23 @@ app.post('/api/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// In your image conversion route
+app.post('/api/convert-image', async (req, res) => {
+    try {
+        const { imageUrl } = req.body;
+        console.log('Received image URL:', imageUrl);
+        
+        // Your existing code...
+
+    } catch (error) {
+        console.error('Server Error:', error);
+        res.status(500).json({ 
+            error: error.message,
+            details: error.stack 
+        });
     }
 });
 
