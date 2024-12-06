@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(25, 25, 25, 0.95);
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        #imageInput {
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        #convertButton, #downloadButton {
+            padding: 12px 24px;
+            background: #2c5282;
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #convertButton:hover, #downloadButton:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #convertButton:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .status-success { 
+            background: rgba(0, 255, 0, 0.1);
+            color: #4ade80; 
+        }
+
+        .status-error { 
+            background: rgba(255, 0, 0, 0.1);
+            color: #f87171; 
+        }
+
+        .status-pending { 
+            background: rgba(0, 0, 255, 0.1);
+            color: #60a5fa; 
+        }
+
+        .cyber-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.05;
+            background: 
+                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
+                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
+            background-size: 20px 20px;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            z-index: 1001;
+        }
+
+        .back-btn:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+        }
+
+        /* Custom file input styling */
+        .file-input-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .file-input-container input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #2c5282;
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .file-input-label:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-name {
+            margin-top: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="cyber-lines"></div>
+    <button class="back-btn" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+    
+    <div class="container">
+        <h1>3D Model Converter</h1>
+        <div class="upload-section">
+            <div class="file-input-container">
+                <label class="file-input-label">
+                    Choose Image
+                    <input type="file" id="imageInput" accept="image/*">
+                </label>
+                <div class="file-name" id="fileName">No file chosen</div>
+            </div>
+            <button id="convertButton">Convert to 3D</button>
+        </div>
+        <div id="status"></div>
+        <button id="downloadButton" style="display: none;">Download 3D Model</button>
+    </div>
+
+    <script>
+        let conversionTimer = 0;
+        let statusCheckInterval;
+
+        const imageInput = document.getElementById('imageInput');
+        const convertButton = document.getElementById('convertButton');
+        const status = document.getElementById('status');
+        const downloadButton = document.getElementById('downloadButton');
+
+        const checkStatus = async (taskId) => {
+            try {
+                console.log('Checking status for task:', taskId);
+                const statusResponse = await fetch(`/api/conversion-status/${taskId}`);
+                const statusData = await statusResponse.json();
+                
+                const result = statusData.result;
+                console.log('Full status response:', result);
+                
+                if (result.status === 'SUCCEEDED') {
+                    clearInterval(statusCheckInterval);
+                    
+                    status.textContent = 'Conversion successful!';
+                    status.className = 'status-success';
+                    downloadButton.style.display = 'block';
+                    
+                    // Log the entire result.result object
+                    console.log('Result object:', result.result);
+                    
+                    if (result.result && result.result.modelUrl) {
+                        const downloadUrl = result.result.modelUrl;
+                        console.log('Found model URL:', downloadUrl);
+                        
+                        // Create a direct download link
+                        downloadButton.onclick = () => {
+                            const link = document.createElement('a');
+                            link.href = downloadUrl;
+                            link.download = 'model.glb';  // Suggest a filename
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        };
+                    } else {
+                        console.error('Model URL not found in:', result);
+                        status.textContent = 'Error: Model URL not found';
+                    }
+                } else if (result.status === 'IN_PROGRESS') {
+                    status.textContent = `Converting image... Time elapsed: ${Math.floor(conversionTimer/60)}:${(conversionTimer%60).toString().padStart(2, '0')}`;
+                    conversionTimer += 5;
+                } else if (result.status === 'FAILED') {
+                    clearInterval(statusCheckInterval);
+                    throw new Error('Conversion failed');
+                }
+            } catch (error) {
+                clearInterval(statusCheckInterval);
+                console.error('Status check error:', error);
+                status.textContent = 'Error checking conversion status. Please try again.';
+                status.className = 'status-error';
+                convertButton.disabled = false;
+            }
+        };
+
+        convertButton.addEventListener('click', async () => {
+            try {
+                const file = imageInput.files[0];
+                if (!file) {
+                    alert('Please select an image first');
+                    return;
+                }
+
+                convertButton.disabled = true;
+                status.textContent = 'Converting image to 3D model...';
+                status.className = 'status-pending';
+                downloadButton.style.display = 'none';
+
+                // Reset timer
+                conversionTimer = 0;
+                
+                // Clear any existing interval
+                if (statusCheckInterval) {
+                    clearInterval(statusCheckInterval);
+                }
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const response = await fetch('/api/convert-to-3d', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: e.target.result
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    if (data.taskId) {
+                        // Start checking status every 5 seconds
+                        statusCheckInterval = setInterval(() => checkStatus(data.taskId), 5000);
+                        // Do initial check right away
+                        checkStatus(data.taskId);
+                    }
+                };
+
+                reader.readAsDataURL(file);
+
+            } catch (error) {
+                console.error('Conversion error:', error);
+                status.textContent = 'Error converting image. Please try again.';
+                status.className = 'status-error';
+                convertButton.disabled = false;
+            }
+        });
+
+        // Update file name display when file is selected
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
+            document.getElementById('fileName').textContent = fileName;
+        });
+    </script>
+</body>
+</html>
