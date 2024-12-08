@@ -5,833 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Chat Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-bg: #1a1a2e;
-            --secondary-bg: #16213e;
-            --accent-color: #4d7cfe;
-            --text-primary: #e2e8f0;
-            --text-secondary: #a0aec0;
-            --success-color: #48bb78;
-            --error-color: #f56565;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--primary-bg);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-            transition: background-color 0.3s ease;
-        }
-
-        .chat-container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background: var(--secondary-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(8px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .chat-container:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        #messages {
-            height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            width: auto;
-            box-sizing: border-box;
-        }
-
-        .message {
-            margin: 12px;
-            padding: 16px;
-            border-radius: 12px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .user-message {
-            background-color: var(--accent-color);
-            color: white;
-            margin-left: auto;
-            box-shadow: 0 4px 15px rgba(77, 124, 254, 0.2);
-            opacity: 1;
-        }
-
-        .ai-message {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-            margin-right: auto;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            opacity: 1;
-        }
-
-        .input-container {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        #messageInput {
-            width: calc(100% - 110px);
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: var(--text-primary);
-            font-size: 16px;
-        }
-
-        #messageInput:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(77, 124, 254, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        button {
-            padding: 12px 24px;
-            background: var(--accent-color);
-            border: none;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(77, 124, 254, 0.2);
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(77, 124, 254, 0.3);
-            background: #5a87fe;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0.5; }
-            to { opacity: 1; }
-        }
-
-        .message {
-            animation: fadeIn 0.3s ease forwards;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .status-dot.connected {
-            background: var(--success-color);
-            box-shadow: 0 0 15px rgba(72, 187, 120, 0.5);
-            animation: pulse 2s infinite;
-        }
-
-        .status-dot.disconnected {
-            background: var(--error-color);
-            box-shadow: 0 0 10px rgba(245, 101, 101, 0.5);
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .study-note-panel {
-            position: fixed;
-            left: -400px;
-            top: 0;
-            width: 380px;
-            height: 100vh;
-            background: var(--secondary-bg);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1000;
-            backdrop-filter: blur(12px);
-        }
-
-        .study-note-panel.active {
-            left: 0;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .note-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .note-item:hover {
-            transform: translateX(5px);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .logout-btn {
-            background: var(--error-color);
-        }
-
-        .logout-btn:hover {
-            background: #f78787;
-        }
-
-        .cyber-lines {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0.05;
-            background: 
-                linear-gradient(90deg, #333 1px, transparent 1px) 0 0,
-                linear-gradient(0deg, #333 1px, transparent 1px) 0 0;
-            background-size: 20px 20px;
-        }
-
-        /* Custom scrollbar */
-        #messages::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #messages::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-
-        #messages::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
-
-        #messages::-webkit-scrollbar-thumb:hover {
-            background: #444;
-        }
-
-        /* Message animations */
-        .message {
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Placeholder styling */
-        ::placeholder {
-            color: #666;
-        }
-
-        /* Add these styles for the chat widget */
-        .chat-widget {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 300px;
-            background: rgba(25, 25, 25, 0.95);
-            border: 2px solid #333;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-        }
-
-        .chat-header {
-            padding: 10px;
-            background: #333;
-            border-radius: 8px 8px 0 0;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chat-header h3 {
-            margin: 0;
-            color: #fff;
-            font-size: 14px;
-        }
-
-        .chat-messages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            background: rgba(30, 30, 30, 0.9);
-        }
-
-        .chat-input {
-            display: flex;
-            padding: 10px;
-            gap: 5px;
-            border-top: 1px solid #333;
-        }
-
-        .chat-input input {
-            flex: 1;
-            padding: 8px;
-            background: #2a2a2a;
-            border: 1px solid #333;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 14px;
-        }
-
-        .chat-input button {
-            padding: 8px 12px;
-            font-size: 14px;
-        }
-
-        .chat-message {
-            margin: 5px 0;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .chat-message.user {
-            background: rgba(40, 40, 40, 0.9);
-            color: #fff;
-            margin-left: 20px;
-        }
-
-        .chat-message.other {
-            background: rgba(255, 255, 255, 0.9);
-            color: #000;
-            margin-right: 20px;
-        }
-
-        .minimize-btn {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            padding: 0 5px;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
-            background: rgba(30, 30, 30, 0.9);
-            border-radius: 5px;
-            font-size: 14px;
-            justify-content: space-between;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #666;
-            transition: background-color 0.3s ease;
-        }
-
-        .status-dot.connected {
-            background: #44ff44;
-            box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
-        }
-
-        .status-dot.disconnected {
-            background: #ff4444;
-            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
-        }
-
-        .status-dot.connecting {
-            background: #ffaa44;
-            box-shadow: 0 0 10px rgba(255, 170, 68, 0.5);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .study-note-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            margin-left: auto;
-        }
-
-        .study-note-panel {
-            position: fixed;
-            left: -400px;
-            top: 0;
-            width: 380px;
-            height: 100vh;
-            background: rgba(25, 25, 25, 0.95);
-            border-right: 2px solid #333;
-            padding: 20px;
-            transition: left 0.3s ease;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .study-note-panel.active {
-            left: 0;
-        }
-
-        .study-note-content {
-            padding: 20px;
-        }
-
-        .study-note-content h3 {
-            color: #fff;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #fff;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            background: #2a2a2a;
-            border: 1px solid #333;
-            border-radius: 5px;
-            color: #fff;
-            font-size: 14px;
-        }
-
-        .form-group textarea {
-            height: 200px;
-            resize: vertical;
-        }
-
-        .form-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .cancel-btn {
-            background: #444;
-        }
-
-        .cancel-btn:hover {
-            background: #555;
-        }
-
-        .url-input-container {
-            display: flex;
-            gap: 10px;
-        }
-
-        .summarize-btn {
-            padding: 8px 16px;
-            white-space: nowrap;
-        }
-
-        .summary-status {
-            margin-top: 8px;
-            font-size: 14px;
-            color: #888;
-        }
-
-        .summary-status.loading {
-            color: #ffaa44;
-        }
-
-        .summary-status.success {
-            color: #44ff44;
-        }
-
-        .summary-status.error {
-            color: #ff4444;
-        }
-
-        .notes-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .notes-list {
-            margin-bottom: 20px;
-            max-height: 300px;
-            overflow-y: auto;
-            background: rgba(40, 40, 40, 0.9);
-            border-radius: 5px;
-            padding: 10px;
-        }
-
-        .note-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 10px;
-            margin-bottom: 8px;
-            background: rgba(50, 50, 50, 0.9);
-            border-radius: 4px;
-            transition: background 0.3s ease;
-        }
-
-        .note-content {
-            flex-grow: 1;
-            cursor: pointer;
-        }
-
-        .note-item:hover {
-            background: rgba(60, 60, 60, 0.9);
-        }
-
-        .note-item h4 {
-            margin: 0 0 5px 0;
-            color: #fff;
-        }
-
-        .note-item p {
-            margin: 0;
-            color: #aaa;
-            font-size: 0.9em;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .load-notes-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        .note-preview {
-            color: #888;
-            font-size: 0.85em;
-            margin-top: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .delete-note-btn {
-            background: none;
-            border: none;
-            color: #ff4444;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 0 5px;
-            margin-left: 10px;
-            transition: color 0.3s ease;
-        }
-
-        .delete-note-btn:hover {
-            color: #ff6666;
-        }
-
-        .notes-controls {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-bottom: 1px solid #444;
-        }
-
-        .delete-mode-btn {
-            padding: 8px 16px;
-            background-color: #444;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .delete-mode-btn.active {
-            background-color: #ff4444;
-        }
-
-        .delete-mode-btn:hover {
-            background-color: #ff6666;
-        }
-
-        .summary-status.warning {
-            color: #ffaa44;
-        }
-
-        .chat-message {
-            margin: 8px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .chat-message.user {
-            background-color: #2c5282;
-            color: white;
-            margin-left: auto;
-        }
-
-        .chat-message.other {
-            background-color: #333;
-            color: white;
-            margin-right: auto;
-        }
-
-        .chat-message.system {
-            background-color: #444;
-            color: #aaa;
-            text-align: center;
-            font-style: italic;
-            margin: 8px auto;
-            font-size: 0.9em;
-        }
-
-        .chat-username {
-            font-weight: bold;
-            margin-right: 8px;
-            font-size: 0.9em;
-        }
-
-        #chatMessages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        .chat-input {
-            display: flex;
-            padding: 10px;
-            gap: 8px;
-        }
-
-        .chat-input input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background: #333;
-            color: white;
-        }
-
-        .chat-input button {
-            padding: 8px 16px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .chat-input button:hover {
-            background: #3182ce;
-        }
-
-        .chat-message {
-            margin: 8px;
-            padding: 8px;
-            border-radius: 12px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .chat-message.user {
-            background-color: #2c5282;
-            color: white;
-            margin-left: auto;
-        }
-
-        .chat-message.other {
-            background-color: #333;
-            color: white;
-            margin-right: auto;
-        }
-
-        .message-content {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sender-name {
-            font-size: 0.8em;
-            opacity: 0.8;
-            margin-bottom: 2px;
-        }
-
-        .message-text {
-            font-size: 1em;
-        }
-
-        #chatMessages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #chatInput {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background: #333;
-            color: white;
-            margin-top: 8px;
-        }
-
-        .logout-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background: #ff4444;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1001;
-        }
-
-        .logout-btn:hover {
-            background: #ff6666;
-            transform: translateY(-2px);
-        }
-
-        .button-group {
-            margin-left: auto;
-            display: flex;
-            gap: 10px;
-        }
-
-        .flashcard-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .flashcard-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-
-        .status-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .ai-status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #666;
-            transition: background-color 0.3s ease;
-        }
-
-        .ai-status-dot.connected {
-            background: #44ff44;
-            box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
-        }
-
-        .ai-status-dot.error {
-            background: #ff4444;
-            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
-        }
-
-        .test-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .test-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-
-        .vocab-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .vocab-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-
-        .assistant-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .assistant-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-
-        .models-btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            background: #2c5282;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .models-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-    </style>
+    <link rel="stylesheet" href="/css/dashboard.css">
+   <script src="/js/clock.js"></script>
 </head>
 <body>
     <div class="cyber-lines"></div>
@@ -879,9 +54,10 @@
                 <span id="aiConnectionStatus"></span>
             </div>
             <div class="button-group">
+                <button id="lectureBtn" class="lecture-btn" onclick="window.location.href='/lecture.html'">Live Lecture</button>
                 <button id="modelsBtn" class="models-btn">Models</button>
                 <button id="assistantBtn" class="assistant-btn">Assistant</button>
-                <button id="vocabBtn" class="vocab-btn">Vocab</button>
+                <button id="vocabBtn" class="vocab-btn">Vocabulary</button>
                 <button id="testBtn" class="test-btn">Test</button>
                 <button id="flashcardBtn" class="flashcard-btn">Flashcards</button>
                 <button id="studyNoteBtn" class="study-note-btn">Study Note</button>
@@ -895,24 +71,72 @@
         </div>
     </div>
 
-    <div class="chat-widget">
-        <div class="chat-header">
-            <h3>Live Chat (<span id="chatUsername"></span>)</h3>
-            <button type="button" id="minimizeChat" class="minimize-btn">+</button>
+    <div class="digital-clock">
+        <div class="time">
+            <span id="hour">00</span>
+            <span class="blink">:</span>
+            <span id="minute">00</span>
+            <span class="blink">:</span>
+            <span id="second">00</span>
+            <span id="period">AM</span>
         </div>
-        <div id="chatContent">
-            <div id="chatMessages"></div>
-            <div class="chat-input">
-                <input type="text" id="chatInput" placeholder="Type a message...">
-                <button onclick="sendChatMessage()">Send</button>
-            </div>
-        </div>
+        <div class="date" id="current-date"></div>
     </div>
 
     <button id="logoutBtn" class="logout-btn">Logout</button>
 
+    <button onclick="toggleForm()" id="menuBtn" class="floating-menu-btn">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+
+    <div id="dropdownForm" style="display: none;">
+        <div class="quick-menu">
+            <button onclick="window.location.href='/dashboard.html'">🏠 Dashboard</button>
+            <button onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
+            <button onclick="window.location.href='/models.html'">🤖 Models</button>
+            <button onclick="window.location.href='/assistant.html'">💬 Assistant</button>
+            <button onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
+            <button onclick="window.location.href='/test.html'">✍️ Test</button>
+            <button onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
+        </div>
+    </div>
+
     <script>
         let username = localStorage.getItem('username');
+
+        // Add these button handlers at the top of your script section
+        document.getElementById('modelsBtn').addEventListener('click', function() {
+            console.log('Models button clicked');
+            window.location.href = '/models.html';
+        });
+
+        document.getElementById('assistantBtn').addEventListener('click', function() {
+            console.log('Assistant button clicked');
+            window.location.href = '/assistant.html';
+        });
+
+        document.getElementById('vocabBtn').addEventListener('click', function() {
+            console.log('Vocab button clicked');
+            window.location.href = '/vocab.html';
+        });
+
+        document.getElementById('testBtn').addEventListener('click', function() {
+            console.log('Test button clicked');
+            window.location.href = '/test.html';
+        });
+
+        document.getElementById('flashcardBtn').addEventListener('click', function() {
+            console.log('Flashcard button clicked');
+            window.location.href = '/flashcards.html';
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            console.log('Logout button clicked');
+            localStorage.removeItem('username');
+            window.location.href = '/login.html';
+        });
 
         async function sendMessage() {
             const messageInput = document.getElementById('messageInput');
@@ -1335,6 +559,10 @@
 
             console.log('Logged in as:', username);
 
+            // Initialize clock
+            updateClock();
+            setInterval(updateClock, 1000);
+
             // Initialize chat widget toggle
             const chatContent = document.getElementById('chatContent');
             // Start with chat closed
@@ -1445,6 +673,63 @@
         document.getElementById('modelsBtn').addEventListener('click', () => {
             window.location.href = 'models.html';
         });
+
+        document.getElementById('menuBtn').addEventListener('click', function() {
+            console.log('Menu button clicked');
+            // Add your menu functionality here
+        });
+
+        let isDropdownOpen = false;
+
+        function toggleForm() {
+            const form = document.getElementById('dropdownForm');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        // Add click handler with debug logging
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded');
+            
+            const menuBtn = document.getElementById('menuBtn');
+            console.log('Menu button found:', menuBtn);
+            
+            if (menuBtn) {
+                menuBtn.addEventListener('click', (e) => {
+                    console.log('Menu button clicked');
+                    e.preventDefault();
+                    toggleForm();
+                });
+            } else {
+                console.error('Menu button not found!');
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('quickActionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted:', {
+                type: document.getElementById('actionType').value,
+                title: document.getElementById('actionTitle').value,
+                description: document.getElementById('actionDescription').value
+            });
+            toggleForm();
+        });
+
+        document.getElementById('newBtn').addEventListener('click', function() {
+            console.log('New button clicked');
+            window.location.href = '/new.html';
+        });
+
+        document.getElementById('lectureBtn').addEventListener('click', function() {
+            console.log('Live Lecture button clicked');
+            window.location.href = '/lecture.html';
+        });
     </script>
 </body>
 </html>
+
+</rewritten_file>

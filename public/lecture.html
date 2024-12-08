@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Lecture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <!-- Hamburger Menu -->
+    <button onclick="toggleForm()" id="menuBtn" class="floating-menu-btn">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+
+    <!-- Dropdown Menu -->
+    <div id="dropdownForm" style="display: none;">
+        <div class="quick-menu">
+            <button onclick="window.location.href='/dashboard.html'">🏠 Dashboard</button>
+            <button onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
+            <button onclick="window.location.href='/models.html'">🤖 Models</button>
+            <button onclick="window.location.href='/assistant.html'">Assistant</button>
+            <button onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
+            <button onclick="window.location.href='/test.html'">✍️ Test</button>
+            <button onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
+        </div>
+    </div>
+
+    <!-- Record Interface -->
+    <div class="record-container">
+        <button id="recordBtn" class="record-btn">
+            <span class="record-icon"></span>
+            RECORD
+        </button>
+        <div class="input-group">
+            <input type="text" id="noteTitle" placeholder="Enter note title..." class="note-title">
+            <button type="button" id="saveBtn" class="save-btn" disabled>💾 Save Note</button>
+        </div>
+        <div id="successMessage"></div>
+    </div>
+
+    <!-- Lecture Content -->
+    <div class="lecture-content">
+        <div id="transcript" class="transcript-container">
+            <p class="placeholder">Recording will appear here and will be in study notes once saved...</p>
+        </div>
+    </div>
+
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+
+    <script>
+        // Prevent any form submissions globally
+        document.addEventListener('submit', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        function toggleForm() {
+            const form = document.getElementById('dropdownForm');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.replace('/login.html');
+                return;
+            }
+
+            const recordBtn = document.getElementById('recordBtn');
+            const transcriptDiv = document.getElementById('transcript');
+            const saveBtn = document.getElementById('saveBtn');
+            const noteTitle = document.getElementById('noteTitle');
+            
+            let mediaRecorder;
+            let audioChunks = [];
+            let isRecording = false;
+            let fullTranscript = '';
+
+            async function startRecording() {
+                try {
+                    console.log('Requesting microphone access...');
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            channelCount: 1,
+                            sampleRate: 48000
+                        }
+                    });
+
+                    console.log('Microphone access granted');
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus',
+                        audioBitsPerSecond: 128000
+                    });
+
+                    audioChunks = [];
+                    isRecording = true;
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            console.log('Received audio chunk:', event.data.size, 'bytes');
+                            audioChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        console.log('Recording stopped, processing audio...');
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        console.log('Audio blob created:', audioBlob.size, 'bytes');
+                        await processAudioInChunks(audioBlob);
+                    };
+
+                    mediaRecorder.start(1000);
+                    console.log('Recording started');
+                    
+                    recordBtn.classList.add('recording');
+                    recordBtn.innerHTML = `
+                        <span class="record-icon"></span>
+                        STOP RECORDING
+                    `;
+                    transcriptDiv.innerHTML = '<p class="recording-status">🎤 Recording in progress...</p>';
+
+                } catch (error) {
+                    console.error('Recording error:', error);
+                    transcriptDiv.innerHTML = `
+                        <p class="error">❌ Error: ${error.message}</p>
+                        <p>Please check your microphone permissions and try again.</p>
+                    `;
+                }
+            }
+
+            async function processAudioInChunks(audioBlob) {
+                try {
+                    console.log('Processing audio...');
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+
+                    const response = await fetch('/api/transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    console.log('Server response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Server response:', data);
+
+                    if (data && data.transcript) {
+                        fullTranscript += (fullTranscript ? '\n\n' : '') + data.transcript;
+                        transcriptDiv.innerHTML = `
+                            <p class="recording-status">✅ Recording processed successfully</p>
+                            <p class="transcript-text">${fullTranscript}</p>
+                        `;
+                        saveBtn.disabled = !noteTitle.value.trim() || !fullTranscript.trim();
+                    } else {
+                        console.error('No transcript in response:', data);
+                        throw new Error('No transcript received from server');
+                    }
+
+                } catch (error) {
+                    console.error('Processing error:', error);
+                    transcriptDiv.innerHTML = `
+                        <p class="error">❌ Error: ${error.message}</p>
+                        <p>Please try recording again. Speak clearly and ensure your microphone is working.</p>
+                    `;
+                }
+            }
+
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    console.log('Stopping recording...');
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    isRecording = false;
+                    recordBtn.classList.remove('recording');
+                    recordBtn.innerHTML = `
+                        <span class="record-icon"></span>
+                        START NEW RECORDING
+                    `;
+                }
+            }
+
+            recordBtn.addEventListener('click', function() {
+                if (!isRecording) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            });
+
+            noteTitle.addEventListener('input', function() {
+                saveBtn.disabled = !this.value.trim() || !fullTranscript.trim();
+            });
+
+            saveBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                const title = noteTitle.value.trim();
+                if (!title || !fullTranscript.trim()) return;
+
+                const existingNotes = JSON.parse(localStorage.getItem('studyNotes') || '[]');
+                const newNote = {
+                    id: Date.now(),
+                    title: title,
+                    content: fullTranscript.trim(),
+                    date: new Date().toISOString()
+                };
+                
+                existingNotes.unshift(newNote);
+                localStorage.setItem('studyNotes', JSON.stringify(existingNotes));
+
+                // Update success message
+                const successMessageContainer = document.getElementById('successMessage');
+                successMessageContainer.className = 'success-toast';
+                successMessageContainer.textContent = '✅ Note saved successfully!';
+
+                setTimeout(() => {
+                    successMessageContainer.textContent = '';
+                    successMessageContainer.className = '';
+                }, 3000);
+
+                noteTitle.value = '';
+                saveBtn.disabled = true;
+
+                return false;
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('username');
+                window.location.href = '/login.html';
+            });
+        });
+    </script>
+</body>
+</html> 
