@@ -11,6 +11,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { v2 as cloudinary } from 'cloudinary';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios';
+import { createClient } from '@deepgram/sdk';
+import fs from 'fs';
+import wav from 'node-wav';
 
 const app = express();
 const server = createServer(app);
@@ -56,6 +59,9 @@ console.log('Cloudinary Configuration:', {
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Initialize Deepgram with the new v3 syntax
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
 app.post('/api/convert-to-3d', async (req, res) => {
     try {
@@ -423,6 +429,67 @@ app.get('/api/proxy-model', async (req, res) => {
     } catch (error) {
         console.error('Model proxy error:', error);
         res.status(500).json({ error: 'Failed to proxy model' });
+    }
+});
+
+app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No audio file provided' });
+        }
+
+        console.log('Received audio file:', req.file.path);
+
+        // Read the audio file
+        const audioFile = await fs.promises.readFile(req.file.path);
+
+        // Get raw transcript from Deepgram
+        const { result } = await deepgram.listen.prerecorded.transcribeFile(
+            audioFile,
+            {
+                smart_format: true,
+                model: 'general',
+                language: 'en-US',
+                mime_type: req.file.mimetype
+            }
+        );
+
+        const rawTranscript = result.results?.channels[0]?.alternatives[0]?.transcript || '';
+        console.log('Raw transcript:', rawTranscript);
+
+        // Process through Gemini
+        const prompt = `Please improve this transcribed text to make it more coherent and well-formatted, 
+            while maintaining the original meaning. Fix any grammar issues and add proper punctuation:
+
+            "${rawTranscript}"
+
+            Return only the improved text without any explanations.`;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const geminiResult = await model.generateContent(prompt);
+        const improvedTranscript = await geminiResult.response.text();
+
+        console.log('Improved transcript:', improvedTranscript);
+
+        res.json({ transcript: improvedTranscript });
+
+        // Clean up the temporary file
+        await fs.promises.unlink(req.file.path);
+
+    } catch (error) {
+        console.error('Transcription error:', error);
+        
+        // Clean up file if it exists
+        if (req.file) {
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error('Error deleting temp file:', err);
+            });
+        }
+        
+        res.status(500).json({
+            error: 'Failed to process audio',
+            details: error.message
+        });
     }
 });
 
