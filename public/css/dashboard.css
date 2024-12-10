@@ -21,8 +21,9 @@ body {
 }
 
 .chat-container {
-    max-width: 800px;
-    margin: 20px auto;
+    width: 80%; /* Set the width of the chat container */
+    max-width: 800px; /* Optional: Set a maximum width */
+    margin: 0 auto; /* Center the chat container */
     padding: 20px;
     background: rgba(20, 30, 48, 0.95);
     border: 1px solid rgba(66, 153, 225, 0.3);
@@ -799,16 +800,6 @@ button:hover {
     box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
 }
 
-.success-toast {
-    width: 100%;
-    text-align: center;
-    padding: 10px;
-    margin-top: 10px;
-    color: #155724;
-    background-color: #d4edda;
-    border-radius: 4px;
-}
-
 .test-btn {
     padding: 8px 16px;
     font-size: 13px;
@@ -873,51 +864,7 @@ button:hover {
     transform: translateY(-1px);
 }
 
-.digital-clock {
-    background: linear-gradient(45deg, rgba(20, 30, 48, 0.95), rgba(44, 82, 130, 0.95));
-    border: 1px solid rgba(66, 153, 225, 0.3);
-    border-radius: 10px;
-    padding: 15px;
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-}
 
-.digital-clock .time {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 24px;
-    color: #4299e1;
-    text-shadow: 0 0 10px rgba(66, 153, 225, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.digital-clock .time span {
-    min-width: 70px;
-    text-align: center;
-}
-
-.digital-clock .time .blink {
-    min-width: 20px;
-    animation: blink 1s infinite;
-}
-
-.digital-clock .time #period {
-    font-size: 24px;
-    min-width: 60px;
-    margin-left: 10px;
-}
-
-.digital-clock .date {
-    font-size: 14px;
-    color: #a0aec0;
-    margin-top: 5px;
-}
 
 @keyframes blink {
     50% {
@@ -1193,22 +1140,21 @@ button:hover {
     padding: 5px;
 }
 
+/* Remove or comment out the success message styles */
 .success-message {
     position: fixed;
     top: 20px;
     right: 20px;
     padding: 15px 25px;
-    background: linear-gradient(45deg, rgba(72, 187, 120, 0.9), rgba(56, 161, 105, 0.9));
-    color: #ffffff;
+    background: transparent; /* Change this to 'transparent' if you want to hide it */
+    color: white;
     border-radius: 8px;
     font-family: 'Orbitron', sans-serif;
-    animation: slideIn 0.3s ease-out;
     z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
 }
 
+/* Optionally, you can also remove the keyframes for the animations if they are not used elsewhere */
 @keyframes slideIn {
     from {
         transform: translateX(100%);
@@ -1217,6 +1163,15 @@ button:hover {
     to {
         transform: translateX(0);
         opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
     }
 }
 
@@ -1294,34 +1249,6 @@ button:hover {
     background: linear-gradient(45deg, #2c5282, #2c5282);
     transform: none;
     box-shadow: none;
-}
-
-/* Update success message style */
-.success-message {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
-    background: linear-gradient(45deg, rgba(72, 187, 120, 0.9), rgba(56, 161, 105, 0.9));
-    color: #ffffff;
-    border-radius: 8px;
-    font-family: 'Orbitron', sans-serif;
-    animation: slideIn 0.3s ease-out;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
 }
 
 /* Summarize button styles */
@@ -1571,17 +1498,15 @@ button:hover {
 
 .input-group {
     display: flex;
-    flex-direction: row;  /* Changed from column to row */
-    align-items: center;
-    justify-content: center;
     gap: 10px;
-    width: 100%;
-    max-width: 500px;
+    margin-bottom: 20px;
 }
 
 .note-title {
-    flex: 1;  /* Added to make the input take up remaining space */
-    min-width: 200px;  /* Added to ensure minimum width */
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
 }
 
 .save-btn, .summarize-btn {
@@ -1850,49 +1775,59 @@ button:hover {
     margin: 20px 0;
 }
 
-.centered-container {
+.chat-wrapper {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    min-height: 80vh;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+    align-items: flex-start; /* Keep it at flex-start to maintain upward alignment */
+    height: auto; /* Allow height to adjust based on content */
+    margin-top: 80px; /* Increased margin to move chat lower */
 }
 
-.record-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
+.dashboard-header {
+    text-align: center; /* Center the text */
+    background: linear-gradient(135deg, #2c5282, #1a365d); /* Gradient background */
+    color: white; /* Text color */
+    padding: 5px; /* Reduced padding for a smaller header */
+    font-family: 'Poppins', sans-serif; /* Use Poppins font for the header */
+    font-size: 1.5em; /* Reduced font size for a smaller appearance */
+    margin: 0; /* Remove default margin */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
+    border-bottom: 2px solid #4a90e2; /* Bottom border for separation */
 }
 
-.input-group {
-    display: flex;
-    flex-direction: row;  /* Changed from column to row */
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 500px;
+.header-buttons {
+    display: flex; /* Use flexbox for button layout */
+    justify-content: center; /* Center the buttons */
+    margin-top: 10px; /* Space between header title and buttons */
 }
 
-.note-title {
-    flex: 1;  /* Added to make the input take up remaining space */
-    min-width: 200px;  /* Added to ensure minimum width */
+.header-buttons button {
+    margin: 0 5px; /* Space between buttons */
+    padding: 8px 12px; /* Padding for buttons */
+    background-color: #4a90e2; /* Button background color */
+    color: white; /* Button text color */
+    border: none; /* Remove border */
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth background color transition */
 }
 
-.lecture-content {
-    width: 100%;
-    max-width: 500px;
-    margin-top: 20px;
+.header-buttons button:hover {
+    background-color: #357ab8; /* Darker shade on hover */
 }
 
-.transcript-container {
-    width: 100%;
-    text-align: center;
+.fade-out {
+    opacity: 0; /* Start with transparent */
+    transition: opacity 1.5s ease; /* Transition effect */
+    visibility: hidden; /* Prevent interaction */
 }
 
+.fade-in {
+    opacity: 0; /* Start with transparent */
+    transition: opacity 1.5s ease; /* Transition effect */
+}
+
+.fade-in.visible {
+    opacity: 1; /* Fully visible */
+    visibility: visible; /* Ensure it's visible */
+}
