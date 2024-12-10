@@ -6,8 +6,9 @@
     <title>Live Lecture</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <script src="/js/clock.js"></script>
 </head>
-<body>
+<body class="fade-in">
     <!-- Hamburger Menu -->
     <button onclick="toggleForm()" id="menuBtn" class="floating-menu-btn">
         <span class="hamburger-line"></span>
@@ -21,7 +22,7 @@
             <button onclick="window.location.href='/dashboard.html'">🏠 Dashboard</button>
             <button onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
             <button onclick="window.location.href='/models.html'">🤖 Models</button>
-            <button onclick="window.location.href='/assistant.html'">Assistant</button>
+            <button onclick="window.location.href='/assistant.html'">💬 Assistant</button>
             <button onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
             <button onclick="window.location.href='/test.html'">✍️ Test</button>
             <button onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
@@ -34,27 +35,30 @@
             <span class="record-icon"></span>
             RECORD
         </button>
-        <div class="input-group">
-            <input type="text" id="noteTitle" placeholder="Enter note title..." class="note-title">
-            <button type="button" id="saveBtn" class="save-btn" disabled>💾 Save Note</button>
-        </div>
-        <div id="successMessage"></div>
     </div>
 
     <!-- Lecture Content -->
     <div class="lecture-content">
-        <div id="transcript" class="transcript-container">
-            <p class="placeholder">Recording will appear here and will be in study notes once saved...</p>
+        <div class="input-group">
+            <input type="text" id="noteTitle" placeholder="Enter note title..." class="note-title">
+            <button id="saveBtn" class="save-btn" disabled>💾 Save Note</button>
+            <button id="summarizeBtn" class="summarize-btn" disabled>🤖 Summarize with AI</button>
         </div>
+        
+        <div id="transcript" class="transcript-container">
+            <p class="placeholder">Recording will appear here...</p>
+        </div>
+        
+        <div id="summaryContainer" class="summary-container"></div>
     </div>
 
-    <button id="logoutBtn" class="logout-btn">Logout</button>
+
 
     <script>
-        // Prevent any form submissions globally
-        document.addEventListener('submit', function(e) {
-            e.preventDefault();
-            return false;
+        // Fade-in effect on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            body.classList.add('visible'); // Add visible class to trigger fade-in
         });
 
         function toggleForm() {
@@ -77,6 +81,8 @@
             const transcriptDiv = document.getElementById('transcript');
             const saveBtn = document.getElementById('saveBtn');
             const noteTitle = document.getElementById('noteTitle');
+            const summarizeBtn = document.getElementById('summarizeBtn');
+            const summaryContainer = document.getElementById('summaryContainer');
             
             let mediaRecorder;
             let audioChunks = [];
@@ -164,6 +170,7 @@
                             <p class="transcript-text">${fullTranscript}</p>
                         `;
                         saveBtn.disabled = !noteTitle.value.trim() || !fullTranscript.trim();
+                        summarizeBtn.disabled = !fullTranscript.trim();
                     } else {
                         console.error('No transcript in response:', data);
                         throw new Error('No transcript received from server');
@@ -204,10 +211,7 @@
                 saveBtn.disabled = !this.value.trim() || !fullTranscript.trim();
             });
 
-            saveBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                
+            saveBtn.addEventListener('click', function() {
                 const title = noteTitle.value.trim();
                 if (!title || !fullTranscript.trim()) return;
 
@@ -219,23 +223,63 @@
                     date: new Date().toISOString()
                 };
                 
-                existingNotes.unshift(newNote);
+                existingNotes.push(newNote);
                 localStorage.setItem('studyNotes', JSON.stringify(existingNotes));
 
-                // Update success message
-                const successMessageContainer = document.getElementById('successMessage');
-                successMessageContainer.className = 'success-toast';
-                successMessageContainer.textContent = '✅ Note saved successfully!';
-
-                setTimeout(() => {
-                    successMessageContainer.textContent = '';
-                    successMessageContainer.className = '';
-                }, 3000);
+                const successMessage = document.createElement('div');
+                successMessage.className = 'success-message';
+                successMessage.textContent = '✅ Note saved successfully!';
+                document.body.appendChild(successMessage);
 
                 noteTitle.value = '';
                 saveBtn.disabled = true;
 
-                return false;
+                setTimeout(() => {
+                    successMessage.remove();
+                }, 3000);
+            });
+
+            summarizeBtn.addEventListener('click', async function() {
+                const text = fullTranscript.trim();
+                if (!text) return;
+
+                summarizeBtn.disabled = true;
+                summarizeBtn.innerHTML = `
+                    <span class="loading-spinner"></span>
+                    Summarizing...
+                `;
+
+                try {
+                    const response = await fetch('/api/summarize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to summarize');
+                    }
+
+                    const { summary } = await response.json();
+                    summaryContainer.innerHTML = `
+                        <h3>AI Summary</h3>
+                        <div class="summary-text">${summary}</div>
+                    `;
+                    summaryContainer.classList.add('visible');
+
+                } catch (error) {
+                    console.error('Summarization error:', error);
+                    summaryContainer.innerHTML = `
+                        <div class="error">
+                            ❌ Failed to generate summary. Please try again.
+                        </div>
+                    `;
+                } finally {
+                    summarizeBtn.disabled = false;
+                    summarizeBtn.innerHTML = '🤖 Summarize with AI';
+                }
             });
 
             document.getElementById('logoutBtn').addEventListener('click', function() {
