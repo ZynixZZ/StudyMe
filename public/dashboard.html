@@ -9,92 +9,111 @@
  
 </head>
 <body>
-    <!-- New header for the dashboard -->
-    <header class="dashboard-header">
-        <h1>StudyHub</h1>
-        <div class="header-buttons">
-            <button id="lectureBtn" class="lecture-btn" onclick="window.location.href='/lecture.html'">Live Lecture</button>
-            <button id="modelsBtn" class="models-btn">Models</button>
-            <button id="assistantBtn" class="assistant-btn">Assistant</button>
-            <button id="vocabBtn" class="vocab-btn">Vocabulary</button>
-            <button id="testBtn" class="test-btn">Test</button>
-            <button id="flashcardBtn" class="flashcard-btn">Flashcards</button>
-            <button id="studyNoteBtn" class="study-note-btn">Study Note</button>
-        </div>
-    </header>
+    <div class="container">
+        <!-- New header for the dashboard -->
+        <header class="dashboard-header">
+            <h1>StudyHub</h1>
+            <div class="header-buttons">
+                <button id="lectureBtn" class="lecture-btn" onclick="window.location.href='/lecture.html'">Live Lecture</button>
+                <button id="modelsBtn" class="models-btn">Models</button>
+                <button id="assistantBtn" class="assistant-btn">Assistant</button>
+                <button id="vocabBtn" class="vocab-btn">Vocabulary</button>
+                <button id="testBtn" class="test-btn">Test</button>
+                <button id="flashcardBtn" class="flashcard-btn">Flashcards</button>
+            </div>
+        </header>
 
-    <div class="cyber-lines"></div>
-    <div id="studyNotePanel" class="study-note-panel">
-        <div class="study-note-content">
-            <div class="notes-header">
-                <h3>Study Notes</h3>
-                <button id="loadNotesBtn" class="load-notes-btn">Load Previous Notes</button>
-            </div>
-            <div id="notesList" class="notes-list" style="display: none;">
-                <!-- Notes will be populated here -->
-            </div>
-            <form id="studyNoteForm">
-                <div class="form-group">
-                    <label for="youtubeUrl">YouTube URL</label>
-                    <div class="url-input-container">
-                        <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL...">
-                        <button type="button" id="summarizeBtn" class="summarize-btn">Summarize</button>
-                    </div>
-                    <div id="summaryStatus" class="summary-status"></div>
-                </div>
-                <div class="form-group">
-                    <label for="noteTitle">Title</label>
-                    <input type="text" id="noteTitle" placeholder="Enter note title...">
-                </div>
-                <div class="form-group">
-                    <label for="noteContent">Content</label>
-                    <textarea id="noteContent" placeholder="Enter your study notes..."></textarea>
-                </div>
-                <div class="form-buttons">
-                    <button type="submit">Save Note</button>
-                    <button type="button" class="cancel-btn" onclick="toggleStudyNote()">Cancel</button>
+        <!-- New Form Section with Only Buttons -->
+        <div class="form-container">
+            <form id="newForm" class="left-form">
+                <!-- Menu Buttons in Column -->
+                <div class="button-group">
+                    <button type="button" id="formLectureBtn" class="lecture-btn" onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
+                    <button type="button" id="formModelsBtn" class="models-btn" onclick="window.location.href='/models.html'">📊 Models</button>
+                    <button type="button" id="formAssistantBtn" class="assistant-btn" onclick="window.location.href='/assistant.html'">🤖 Assistant</button>
+                    <button type="button" id="formVocabBtn" class="vocab-btn" onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
+                    <button type="button" id="formTestBtn" class="test-btn" onclick="window.location.href='/test.html'">✍️ Test</button>
+                    <button type="button" id="formFlashcardBtn" class="flashcard-btn" onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
                 </div>
             </form>
         </div>
-    </div>
-    <div class="chat-wrapper">
-        <div class="chat-container">
-            <div class="connection-status">
-                <div class="status-group">
-                    <span class="status-dot"></span>
-                    <span id="connectionStatus">.</span>
+
+        <div class="cyber-lines"></div>
+        <div id="studyNotePanel" class="study-note-panel">
+            <div class="study-note-content">
+                <div class="notes-header">
+                    <h3>Study Notes</h3>
+                    <button id="loadNotesBtn" class="load-notes-btn">Load Previous Notes</button>
+                    <button id="studyNoteBtn" class="study-note-btn" onclick="toggleStudyNote()">📝 Study Note</button>
                 </div>
-                <div class="status-group">
-                    <span class="ai-status-dot"></span>
-                    <span id="aiConnectionStatus"></span>
+                <div id="notesList" class="notes-list" style="display: none;">
+                    <!-- Notes will be populated here -->
                 </div>
-            </div>
-            
-            <div id="messages"></div>
-            <div class="input-container">
-                <input type="text" id="messageInput" placeholder="Enter your message...">
-                <button onclick="sendMessage()">Send</button>
+                <form id="studyNoteForm">
+                    <div class="form-group">
+                        <label for="youtubeUrl">YouTube URL</label>
+                        <div class="url-input-container">
+                            <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL...">
+                            <button type="button" id="summarizeBtn" class="summarize-btn">Summarize</button>
+                        </div>
+                        <div id="summaryStatus" class="summary-status"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="noteTitle">Title</label>
+                        <input type="text" id="noteTitle" placeholder="Enter note title...">
+                    </div>
+                    <div class="form-group">
+                        <label for="noteContent">Content</label>
+                        <textarea id="noteContent" placeholder="Enter your study notes..."></textarea>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="submit">Save Note</button>
+                        <button type="button" class="cancel-btn" onclick="toggleStudyNote()">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
 
-    <button id="logoutBtn" class="logout-btn">Logout</button>
+        <div class="chat-wrapper">
+            <div class="chat-container">
+                <div class="connection-status">
+                    <div class="status-group">
+                        <span class="status-dot"></span>
+                        <span id="connectionStatus">.</span>
+                    </div>
+                    <div class="status-group">
+                        <span class="ai-status-dot"></span>
+                        <span id="aiConnectionStatus"></span>
+                    </div>
+                    <button id="studyNoteBtn" class="study-note-btn" onclick="toggleStudyNote()">📝 Study Note</button>
+                </div>
+                
+                <div id="messages"></div>
+                <div class="input-container">
+                    <input type="text" id="messageInput" placeholder="Enter your message...">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
 
-    <button onclick="toggleForm()" id="menuBtn" class="floating-menu-btn">
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-    </button>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
 
-    <div id="dropdownForm" style="display: none;">
-        <div class="quick-menu">
-            <button onclick="window.location.href='/dashboard.html'">🏠 Dashboard</button>
-            <button onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
-            <button onclick="window.location.href='/models.html'">🤖 Models</button>
-            <button onclick="window.location.href='/assistant.html'">💬 Assistant</button>
-            <button onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
-            <button onclick="window.location.href='/test.html'">✍️ Test</button>
-            <button onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
+        <button onclick="toggleForm()" id="menuBtn" class="floating-menu-btn">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+
+        <div id="dropdownForm" style="display: none;">
+            <div class="quick-menu">
+                <button onclick="window.location.href='/dashboard.html'">🏠 Dashboard</button>
+                <button onclick="window.location.href='/lecture.html'">🎥 Live Lecture</button>
+                <button onclick="window.location.href='/models.html'">🤖 Models</button>
+                <button onclick="window.location.href='/assistant.html'">💬 Assistant</button>
+                <button onclick="window.location.href='/vocab.html'">📚 Vocabulary</button>
+                <button onclick="window.location.href='/test.html'">✍️ Test</button>
+                <button onclick="window.location.href='/flashcards.html'">🎴 Flashcards</button>
+            </div>
         </div>
     </div>
 
