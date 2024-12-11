@@ -22,7 +22,7 @@ body {
 
 .chat-container {
     width: 80%; /* Set the width of the chat container */
-    max-width: 800px; /* Optional: Set a maximum width */
+    max-width: 1000px; /* Optional: Set a maximum width */
     margin: 0 auto; /* Center the chat container */
     padding: 20px;
     background: rgba(20, 30, 48, 0.95);
@@ -1830,4 +1830,108 @@ button:hover {
 .fade-in.visible {
     opacity: 1; /* Fully visible */
     visibility: visible; /* Ensure it's visible */
+}
+
+/* Add this to your existing CSS file */
+.form-container {
+    position: fixed; /* Fixed position to keep it on the left */
+    top: 0; /* Start from the very top */
+    left: 20px; /* Space from the left */
+    width: 250px; /* Adjusted width for a thinner form */
+    height: 100%; /* Full height */
+    background: rgba(25, 25, 25, 0.95); /* Background color */
+    border-radius: 0; /* No rounded corners */
+    padding: 20px; /* Padding inside the form */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Shadow for depth */
+    z-index: 1000; /* Ensure it appears above other content */
+}
+
+.left-form {
+    display: flex;
+    flex-direction: column; /* Stack elements vertically */
+}
+
+.form-group {
+    margin-bottom: 15px; /* Space between form groups */
+}
+
+.form-group label {
+    color: #fff; /* Label color */
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%; /* Full width */
+    padding: 10px; /* Padding inside inputs */
+    border: 1px solid #444; /* Border color */
+    border-radius: 5px; /* Rounded corners */
+    background: #333; /* Background color */
+    color: #fff; /* Text color */
+}
+
+.form-group textarea {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 100px; /* Minimum height for textarea */
+}
+
+button {
+    padding: 10px; /* Padding for buttons */
+    background: #4a90e2; /* Button background color */
+    color: white; /* Button text color */
+    border: none; /* Remove border */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth background color transition */
+}
+
+button:hover {
+    background-color: #357ab8; /* Darker shade on hover */
+}
+
+.button-group {
+    display: flex; /* Use flexbox for layout */
+    flex-direction: column; /* Arrange buttons in a column */
+    gap: 10px; /* Space between buttons */
+    margin-top: 20px; /* Optional: Space above the button group */
+    align-items: center; /* Center the buttons horizontally */
+    width: 100%; /* Ensure the button group takes full width of the form */
+}
+
+.button-group button {
+    width: 100%; /* Make buttons take the full width of the button group */
+    max-width: 200px; /* Optional: Set a maximum width for buttons */
+    text-align: center; /* Center text within buttons */
+}
+
+/* Ensure the container takes full height and uses flexbox */
+.container {
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    height: 100%; /* Full height */
+}
+
+/* Adjust the header to take only necessary space */
+.dashboard-header {
+    flex: 0 0 auto; /* Header takes only necessary space */
+}
+
+/* Adjust the form container to take only necessary space */
+.form-container {
+    flex: 0 0 auto; /* Form takes only necessary space */
+}
+
+/* Make the chat wrapper take the remaining space */
+.chat-wrapper {
+    flex: 1; /* Chat takes the remaining space */
+    display: flex;
+    flex-direction: column; /* Stack chat elements vertically */
+}
+
+/* Ensure the chat container takes the remaining space and aligns with the form */
+.chat-container {
+    flex: 1; /* Chat container takes remaining space */
+    display: flex;
+    flex-direction: column; /* Stack chat elements vertically */
+    width: calc(100% - 300px); /* Adjust width to fill remaining space */
+    min-width: 0; /* Prevent overflow issues */
 }
