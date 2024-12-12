@@ -85,6 +85,7 @@
                         <span class="ai-status-dot"></span>
                         <span id="aiConnectionStatus"></span>
                     </div>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
                     <button id="studyNoteBtn" class="study-note-btn" onclick="toggleStudyNote()">📝 Study Note</button>
                 </div>
                 
@@ -93,6 +94,32 @@
                     <input type="text" id="messageInput" placeholder="Enter your message...">
                     <button onclick="sendMessage()">Send</button>
                 </div>
+            </div>
+            
+            <div class="document-upload-container">
+                <form class="document-form" id="documentForm">
+                    <div class="upload-text">Drag or upload document here...</div>
+                    <input type="file" id="fileInput" style="display: none;" accept="image/*">
+                    <div class="drop-zone" id="dropZone">
+                        Drop files here
+                    </div>
+                    <button type="button" class="upload-btn" onclick="testUpload()">
+                        Upload File
+                    </button>
+                </form>
+            </div>
+
+            <div class="video-upload-container">
+                <form class="video-form" id="videoForm">
+                    <div class="video-container">
+                        <div class="upload-text" id="uploadPrompt">Upload video url to watch...</div>
+                        <div class="url-input-wrapper">
+                            <input type="text" id="videoUrl" class="video-url-input" placeholder="Paste YouTube URL here...">
+                            <button type="button" onclick="loadVideo()" class="load-video-btn">Load</button>
+                        </div>
+                        <div id="videoPlayer" class="video-player"></div>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -748,6 +775,259 @@
                 }, 500); // Keep the timeout for the fade-out duration
             });
         });
+
+        function loadVideo() {
+            const urlInput = document.getElementById('videoUrl');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const uploadPrompt = document.getElementById('uploadPrompt');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                alert('Please enter a YouTube URL');
+                return;
+            }
+
+            const videoId = extractYouTubeId(url);
+            console.log('Extracted video ID:', videoId); // Debug log
+            
+            if (videoId) {
+                // Hide upload prompt
+                uploadPrompt.style.display = 'none';
+                
+                // Create and set up the iframe
+                videoPlayer.innerHTML = `
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src="https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1"
+                        title="YouTube video player"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; autoplay"
+                        allowfullscreen
+                    ></iframe>
+                `;
+                
+                // Show video player
+                videoPlayer.style.display = 'block';
+                videoPlayer.classList.add('active');
+                
+                console.log('Video player updated'); // Debug log
+            } else {
+                alert('Invalid YouTube URL. Please check the URL and try again.');
+            }
+        }
+
+        function extractYouTubeId(url) {
+            let videoId = '';
+            
+            // Handle full YouTube URLs
+            if (url.includes('youtube.com/watch?v=')) {
+                videoId = url.split('v=')[1];
+            }
+            // Handle shortened youtu.be URLs
+            else if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1];
+            }
+            
+            // Remove any additional parameters
+            if (videoId) {
+                videoId = videoId.split('&')[0];
+            }
+            
+            return videoId || null;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const documentForm = document.getElementById('documentForm');
+
+            // Handle click to upload
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Handle file input change
+            fileInput.addEventListener('change', handleFileUpload);
+
+            // Handle drag and drop events
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+
+            // Handle file upload
+            async function handleFileUpload(e) {
+                const files = e.target.files;
+                handleFiles(files);
+            }
+
+            async function handleFiles(files) {
+                for (const file of files) {
+                    if (file.type.startsWith('image/')) {
+                        try {
+                            // Show loading message
+                            appendMessage('system', `Processing image: ${file.name}...`);
+                            
+                            const base64Image = await convertToBase64(file);
+                            
+                            // Send to server
+                            const response = await fetch('/api/analyze-image', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    image: base64Image,
+                                    filename: file.name,
+                                    username: localStorage.getItem('username')
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Failed to analyze image');
+                            }
+
+                            const data = await response.json();
+
+                            // Add success message and analysis to chat
+                            appendMessage('system', `✅ Image uploaded successfully: ${file.name}`);
+                            if (data.analysis) {
+                                appendMessage('ai', data.analysis);
+                            }
+
+                            // Clear the file input
+                            document.getElementById('fileInput').value = '';
+
+                        } catch (error) {
+                            console.error('Error processing file:', error);
+                            appendMessage('error', `❌ Failed to process image: ${error.message}`);
+                        }
+                    } else {
+                        appendMessage('error', '❌ Please upload an image file.');
+                    }
+                }
+            }
+
+            function convertToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        // Add these functions at the beginning of your <script> section
+        function testUpload() {
+            console.log('Upload button clicked');
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) {
+                console.log('File input found');
+                fileInput.click();
+                
+                // Add event listener for file selection
+                fileInput.addEventListener('change', function(e) {
+                    console.log('File selected:', e.target.files);
+                    handleFiles(e.target.files);
+                });
+            } else {
+                console.error('File input not found!');
+            }
+        }
+
+        // Define handleFiles in global scope
+        async function handleFiles(files) {
+            console.log('handleFiles called with files:', files);
+
+            for (const file of files) {
+                console.log('Processing file:', file);
+                
+                if (file.type.startsWith('image/')) {
+                    try {
+                        console.log('Converting image to base64...');
+                        const base64Image = await convertToBase64(file);
+                        console.log('Base64 conversion successful');
+
+                        // Show loading message
+                        appendMessage('system', `Processing image: ${file.name}...`);
+                        
+                        console.log('Sending request to server...');
+                        const response = await fetch('/api/analyze-image', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                image: base64Image,
+                                filename: file.name,
+                                username: localStorage.getItem('username')
+                            })
+                        });
+
+                        console.log('Server response:', response);
+
+                        if (!response.ok) {
+                            throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+                        console.log('Response data:', data);
+
+                        // Add success message and analysis to chat
+                        appendMessage('system', `✅ Image uploaded successfully: ${file.name}`);
+                        if (data.analysis) {
+                            appendMessage('ai', data.analysis);
+                        }
+
+                    } catch (error) {
+                        console.error('Detailed error:', error);
+                        appendMessage('error', `❌ Failed to process image: ${error.message}`);
+                    }
+                } else {
+                    console.log('Invalid file type:', file.type);
+                    appendMessage('error', '❌ Please upload an image file.');
+                }
+            }
+        }
+
+        // Define convertToBase64 in global scope
+        function convertToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    console.log('FileReader onload triggered');
+                    resolve(reader.result.split(',')[1]);
+                };
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                    reject(error);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Define appendMessage in global scope if it's not already defined
+        function appendMessage(type, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
     </script>
 </body>
 </html>
