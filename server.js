@@ -493,6 +493,90 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     }
 });
 
+// Add this endpoint to your existing Express routes
+app.post('/api/analyze-image', async (req, res) => {
+    try {
+        console.log('Received image analysis request');
+        const { image, filename, username } = req.body;
+
+        if (!image) {
+            console.error('No image data received');
+            return res.status(400).json({
+                success: false,
+                error: 'No image data provided'
+            });
+        }
+
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not configured');
+            return res.status(500).json({
+                success: false,
+                error: 'API configuration error'
+            });
+        }
+
+        console.log('Image data received, initializing Gemini model...');
+        
+        try {
+            // Update to use gemini-1.5-flash model
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            console.log('Gemini model initialized successfully');
+
+            // Prepare the image parts
+            const prompt = "Analyze this image and describe what you see in detail.";
+            const imageParts = [
+                {
+                    inlineData: {
+                        data: image,
+                        mimeType: "image/jpeg"
+                    }
+                }
+            ];
+
+            console.log('Sending request to Gemini...');
+            
+            // Generate content from the image using the new format
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }, ...imageParts] }]
+            });
+
+            console.log('Received response from Gemini');
+            const response = await result.response;
+            const analysis = response.text();
+
+            console.log('Analysis generated successfully');
+            res.json({
+                success: true,
+                analysis: analysis,
+                message: 'Image analyzed successfully'
+            });
+
+        } catch (modelError) {
+            console.error('Gemini API error:', {
+                message: modelError.message,
+                stack: modelError.stack
+            });
+            throw modelError;
+        }
+
+    } catch (error) {
+        console.error('Detailed error in analyze-image:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            apiKey: process.env.GEMINI_API_KEY ? 'Present' : 'Missing',
+            apiKeyLength: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0
+        });
+        
+        res.status(500).json({
+            success: false,
+            error: 'Failed to analyze image',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
 // ... rest of your server code ...
 
 const PORT = process.env.PORT || 3000;
